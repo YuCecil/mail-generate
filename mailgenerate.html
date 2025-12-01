@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>批量信件生成器 (Outlook專用版)</title>
+    <title>信件生成器 (Outlook專用版)</title>
     <!-- 引入 Tailwind CSS 進行樣式設定 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 Lucide Icons 圖示庫 -->
@@ -85,11 +85,8 @@
         <div class="bg-blue-600 p-6 text-white flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl font-bold flex items-center gap-2">
-                    <i data-lucide="mail" class="h-6 w-6"></i> 批量信件生成器
+                    <i data-lucide="mail" class="h-6 w-6"></i> 信件生成器
                 </h1>
-                <p class="text-blue-100 text-sm mt-1">
-                    HTML 獨立版：專為 Outlook 優化，下載即用
-                </p>
             </div>
             <div class="flex gap-2 w-full sm:w-auto overflow-x-auto">
                 <button onclick="switchTab('data')" id="btn-tab-data"
@@ -102,7 +99,7 @@
                 </button>
                 <button onclick="switchTab('preview')" id="btn-tab-preview"
                     class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-700 text-white hover:bg-blue-500">
-                    3. 預覽發送
+                    3. 草稿預覽
                 </button>
             </div>
         </div>
@@ -113,9 +110,17 @@
             <!-- STEP 1: DATA INPUT -->
             <div id="tab-data" class="tab-content active space-y-4">
                 <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-semibold flex items-center gap-2">
-                        <i data-lucide="users" class="h-5 w-5 text-blue-600"></i> 資料來源
-                    </h2>
+                    <div class="flex items-center gap-4">
+                        <h2 class="text-xl font-semibold flex items-center gap-2">
+                            <i data-lucide="users" class="h-5 w-5 text-blue-600"></i> 資料來源
+                        </h2>
+                        <!-- 清空資料按鈕 -->
+                        <button onclick="clearData()"
+                            class="text-xs flex items-center gap-1 text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded transition-colors border border-transparent hover:border-red-200"
+                            title="清空所有資料">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i> 清空資料
+                        </button>
+                    </div>
                     <span id="data-count" class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                         共 0 筆
                     </span>
@@ -126,13 +131,39 @@
                         使用說明：</p>
                     <ul class="list-disc list-inside mt-1 ml-1 space-y-1">
                         <li>請直接從 Excel 複製表格內容（含標題列）並貼在下方。</li>
-                        <li>第一列必須是「標題」（例如：姓名、Email），這些將成為變數。</li>
+                        <li>第一列必須是「標題」（例如：姓名、Email、CC），這些將成為變數。</li>
+                        <li class="text-blue-700 bg-blue-50 py-1 px-2 rounded -ml-2 my-1 inline-block font-semibold">
+                            自動抓取關鍵字：
+                            <br>• 收件人：Email、email、信箱、收件人
+                            <br>• 副本：CC、cc、副本
+                        </li>
+                        <li><strong>自動儲存：</strong>您的資料會自動儲存在此瀏覽器中，關閉後再打開不會消失。</li>
                     </ul>
                 </div>
 
                 <textarea id="csv-input"
                     class="w-full h-64 p-4 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     placeholder="在此貼上 Excel 資料..."></textarea>
+
+                <!-- 合併寄信設定區塊 -->
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-2">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="group-enable"
+                                class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" onchange="toggleGrouping()">
+                            <span class="font-medium text-gray-700">啟用合併寄信 (Group Merge)</span>
+                        </label>
+
+                        <div id="group-settings"
+                            class="hidden flex flex-col sm:flex-row sm:items-center gap-2 animate-fade-in">
+                            <span class="text-sm text-gray-600">依據欄位合併：</span>
+                            <select id="group-column"
+                                class="p-1.5 border border-gray-300 rounded text-sm outline-none focus:border-blue-500 bg-white"
+                                onchange="updateGroupingColumn()"></select>
+                            <span class="text-xs text-gray-500 ml-1">(相同值的列將合併，Email 與 副本 用分號串接，其他用頓號串接)</span>
+                        </div>
+                    </div>
+                </div>
 
                 <div id="table-preview-container" class="overflow-x-auto border rounded-lg mt-4 hidden">
                     <!-- 表格預覽將生成於此 -->
@@ -142,9 +173,18 @@
             <!-- STEP 2: TEMPLATE EDITOR -->
             <div id="tab-template" class="tab-content space-y-6">
                 <div class="flex justify-between items-start">
-                    <h2 class="text-xl font-semibold flex items-center gap-2">
-                        <i data-lucide="file-text" class="h-5 w-5 text-blue-600"></i> 信件模板
-                    </h2>
+                    <div class="flex items-center gap-4">
+                        <h2 class="text-xl font-semibold flex items-center gap-2">
+                            <i data-lucide="file-text" class="h-5 w-5 text-blue-600"></i> 信件模板
+                        </h2>
+                        <!-- 清空模板按鈕 -->
+                        <button onclick="clearTemplate()"
+                            class="text-xs flex items-center gap-1 text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded transition-colors border border-transparent hover:border-red-200"
+                            title="清空主旨與內文">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i> 清空模板
+                        </button>
+                    </div>
+
                     <div class="w-1/3 text-right">
                         <span class="text-xs text-gray-500 block mb-1">插入變數</span>
                         <div id="variable-buttons" class="flex flex-wrap gap-1 justify-end">
@@ -159,11 +199,8 @@
                         <input type="text" id="subject-input"
                             class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">副本 (CC)</label>
-                        <input type="text" id="cc-input"
-                            class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
+                    <!-- 移除固定副本輸入框 -->
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">內文 (預設字體: Calibri, 12pt)</label>
 
@@ -282,17 +319,8 @@
             <!-- STEP 3: PREVIEW & GENERATE -->
             <div id="tab-preview" class="tab-content space-y-6">
                 <h2 class="text-xl font-semibold flex items-center gap-2">
-                    <i data-lucide="play" class="h-5 w-5 text-blue-600"></i> 預覽與發送
+                    <i data-lucide="play" class="h-5 w-5 text-blue-600"></i> 草稿預覽
                 </h2>
-
-                <div
-                    class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800 flex items-start gap-2">
-                    <i data-lucide="alert-circle" class="h-5 w-5 flex-shrink-0 mt-0.5"></i>
-                    <div>
-                        <strong>Outlook 貼上技巧：</strong>
-                        <p>系統已將內容轉換為 Outlook 友善的格式。若貼上後仍有問題，請在 Outlook 貼上時選擇「保留來源格式」。</p>
-                    </div>
-                </div>
 
                 <div id="preview-container" class="grid gap-6">
                     <!-- 預覽卡片將生成於此 -->
@@ -318,12 +346,16 @@
         let state = {
             csvInput: defaultData,
             subjectTemplate: '關於 {學校} 的 {課程名稱} 開課通知',
-            ccTemplate: '',
-            parsedData: [],
-            headers: []
+            // ccTemplate: '', // 移除固定副本狀態
+            parsedData: [], // 原始解析資料
+            displayData: [], // 實際顯示資料 (可能經過合併)
+            headers: [],
+            bodyTemplate: defaultBody,
+            grouping: { enabled: false, column: '' } // 新增合併設定
         };
 
-        let savedRange = null; // 用於儲存選取範圍
+        const STORAGE_KEY = 'email_generator_state_v3'; // 更新 key 避免舊資料衝突
+        let savedRange = null;
 
         // DOM 元素引用
         const els = {
@@ -332,9 +364,12 @@
             tablePreview: document.getElementById('table-preview-container'),
             variableButtons: document.getElementById('variable-buttons'),
             subjectInput: document.getElementById('subject-input'),
-            ccInput: document.getElementById('cc-input'),
+            // ccInput: document.getElementById('cc-input'), // 移除 DOM 參照
             editor: document.getElementById('editor-content'),
             previewContainer: document.getElementById('preview-container'),
+            groupEnable: document.getElementById('group-enable'),
+            groupSettings: document.getElementById('group-settings'),
+            groupColumn: document.getElementById('group-column'),
             btns: {
                 data: document.getElementById('btn-tab-data'),
                 template: document.getElementById('btn-tab-template'),
@@ -349,18 +384,35 @@
 
         // --- 初始化 ---
         function init() {
+            // 1. 嘗試讀取本地儲存
+            loadState();
+
+            // 2. 初始化 UI
             els.csvInput.value = state.csvInput;
             els.subjectInput.value = state.subjectTemplate;
-            els.editor.innerHTML = defaultBody;
+            els.editor.innerHTML = state.bodyTemplate || defaultBody;
 
-            // 綁定事件
+            // 設定合併 UI 狀態
+            els.groupEnable.checked = state.grouping.enabled;
+            if (state.grouping.enabled) els.groupSettings.classList.remove('hidden');
+
+            // 3. 綁定事件 - 加入自動儲存
             els.csvInput.addEventListener('input', (e) => {
                 state.csvInput = e.target.value;
                 parseData();
+                saveState();
             });
 
-            els.subjectInput.addEventListener('input', (e) => state.subjectTemplate = e.target.value);
-            els.ccInput.addEventListener('input', (e) => state.ccTemplate = e.target.value);
+            els.subjectInput.addEventListener('input', (e) => {
+                state.subjectTemplate = e.target.value;
+                saveState();
+            });
+
+            // 編輯器內容變更時儲存
+            els.editor.addEventListener('input', (e) => {
+                state.bodyTemplate = els.editor.innerHTML;
+                saveState();
+            });
 
             // 點擊外部關閉色盤
             document.addEventListener('click', (e) => {
@@ -369,9 +421,167 @@
                 }
             });
 
-            parseData(); // 初次解析
+            parseData(); // 初次解析 (會觸發 applyGrouping)
             lucide.createIcons();
         }
+
+        // --- 儲存與讀取狀態 ---
+        function saveState() {
+            try {
+                // 儲存需要的欄位
+                const dataToSave = {
+                    csvInput: state.csvInput,
+                    subjectTemplate: state.subjectTemplate,
+                    // ccTemplate: state.ccTemplate, // 移除
+                    bodyTemplate: state.bodyTemplate,
+                    grouping: state.grouping
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+            } catch (e) {
+                console.error("儲存失敗", e);
+            }
+        }
+
+        function loadState() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state.csvInput = parsed.csvInput !== undefined ? parsed.csvInput : defaultData;
+                    state.subjectTemplate = parsed.subjectTemplate !== undefined ? parsed.subjectTemplate : '關於 {學校} 的 {課程名稱} 開課通知';
+                    // state.ccTemplate = parsed.ccTemplate !== undefined ? parsed.ccTemplate : ''; // 移除
+                    state.bodyTemplate = parsed.bodyTemplate !== undefined ? parsed.bodyTemplate : defaultBody;
+                    // 讀取合併設定
+                    if (parsed.grouping) {
+                        state.grouping = parsed.grouping;
+                    }
+                }
+            } catch (e) {
+                console.error("讀取失敗，使用預設值", e);
+            }
+        }
+
+        // --- 清除功能 ---
+        function clearData() {
+            if (confirm("確定要清空所有資料嗎？此動作無法復原。")) {
+                state.csvInput = "";
+                els.csvInput.value = "";
+                parseData();
+                saveState();
+            }
+        }
+
+        function clearTemplate() {
+            if (confirm("確定要清空主旨與內文模板嗎？此動作無法復原。")) {
+                state.subjectTemplate = "";
+                // state.ccTemplate = ""; // 移除
+                state.bodyTemplate = "";
+
+                els.subjectInput.value = "";
+                // els.ccInput.value = ""; // 移除
+                els.editor.innerHTML = "";
+
+                saveState();
+            }
+        }
+
+        // --- 合併寄信邏輯 ---
+        function toggleGrouping() {
+            state.grouping.enabled = els.groupEnable.checked;
+            if (state.grouping.enabled) {
+                els.groupSettings.classList.remove('hidden');
+            } else {
+                els.groupSettings.classList.add('hidden');
+            }
+            // 重設欄位選擇 (如果之前沒選或被清空)
+            if (state.grouping.enabled && !state.grouping.column && state.headers.length > 0) {
+                state.grouping.column = state.headers[0];
+            }
+            updateGroupingUI();
+            applyGrouping();
+            saveState();
+        }
+
+        function updateGroupingColumn() {
+            state.grouping.column = els.groupColumn.value;
+            applyGrouping();
+            saveState();
+        }
+
+        function updateGroupingUI() {
+            // 更新下拉選單
+            els.groupColumn.innerHTML = '';
+            state.headers.forEach(h => {
+                const option = document.createElement('option');
+                option.value = h;
+                option.text = h;
+                if (h === state.grouping.column) {
+                    option.selected = true;
+                }
+                els.groupColumn.appendChild(option);
+            });
+        }
+
+        function applyGrouping() {
+            if (!state.grouping.enabled || !state.grouping.column || state.parsedData.length === 0) {
+                // 不合併：顯示原始資料
+                state.displayData = [...state.parsedData];
+            } else {
+                // 執行合併
+                const groupMap = new Map();
+                const targetCol = state.grouping.column;
+
+                state.parsedData.forEach(row => {
+                    const key = row[targetCol] || '(未分類)';
+
+                    if (!groupMap.has(key)) {
+                        // 初始化群組，複製第一筆資料的所有欄位作為基礎
+                        // 但將每個欄位的值轉為陣列，方便後續加入
+                        const initialObj = {};
+                        state.headers.forEach(h => {
+                            initialObj[h] = [row[h]];
+                        });
+                        groupMap.set(key, initialObj);
+                    } else {
+                        // 加入現有群組
+                        const existingObj = groupMap.get(key);
+                        state.headers.forEach(h => {
+                            // 排除空值
+                            if (row[h]) existingObj[h].push(row[h]);
+                        });
+                    }
+                });
+
+                // 將群組轉回顯示用的物件陣列
+                state.displayData = Array.from(groupMap.values()).map(groupObj => {
+                    const finalRow = {};
+                    state.headers.forEach(h => {
+                        const values = groupObj[h];
+                        // 去除重複值 (Set)
+                        const uniqueValues = [...new Set(values)];
+
+                        // 判定是否為收件人或副本欄位 (不分大小寫)
+                        const hLower = h.toLowerCase();
+                        const isRecipient = hLower === 'email' || h === '收件人' || h === '信箱';
+                        const isCC = hLower === 'cc' || h === '副本';
+
+                        if (isRecipient || isCC) {
+                            // Email 和 副本 用分號串接 (Outlook 格式)
+                            finalRow[h] = uniqueValues.join('; ');
+                        } else if (h === targetCol) {
+                            // 分組依據欄位保持單一值
+                            finalRow[h] = uniqueValues[0];
+                        } else {
+                            // 其他欄位用頓號串接 (適合中文語境)
+                            finalRow[h] = uniqueValues.join('、');
+                        }
+                    });
+                    return finalRow;
+                });
+            }
+            updateDataUI(); // 更新預覽計數
+        }
+
 
         // --- 核心邏輯 ---
 
@@ -406,6 +616,7 @@
             if (!input) {
                 state.parsedData = [];
                 state.headers = [];
+                state.displayData = []; // 清空顯示資料
                 updateDataUI();
                 return;
             }
@@ -426,22 +637,30 @@
                 return obj;
             });
 
-            updateDataUI();
+            // 資料解析後，更新合併選項並執行合併
+            updateGroupingUI();
+            applyGrouping();
         }
 
         // 3. 更新資料介面
         function updateDataUI() {
-            els.dataCount.innerText = `共 ${state.parsedData.length} 筆`;
-            if (state.parsedData.length > 0) {
+            // 顯示的是「合併後」的筆數
+            els.dataCount.innerText = `共 ${state.displayData.length} 筆`; // 改用 displayData
+
+            if (state.displayData.length > 0) {
                 let tableHTML = `<table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>`;
                 state.headers.forEach(h => {
                     tableHTML += `<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">${h}</th>`;
                 });
                 tableHTML += `</tr></thead><tbody class="bg-white divide-y divide-gray-200">`;
-                state.parsedData.slice(0, 3).forEach(row => {
+                // 預覽前 3 筆 (使用合併後的資料)
+                state.displayData.slice(0, 3).forEach(row => {
                     tableHTML += `<tr>`;
                     state.headers.forEach(h => {
-                        tableHTML += `<td class="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">${row[h]}</td>`;
+                        // 截斷過長的內容以免表格跑版
+                        let cellContent = row[h] || '';
+                        if (cellContent.length > 20) cellContent = cellContent.substring(0, 20) + '...';
+                        tableHTML += `<td class="px-3 py-2 text-sm text-gray-700 whitespace-nowrap" title="${row[h]}">${cellContent}</td>`;
                     });
                     tableHTML += `</tr>`;
                 });
@@ -451,6 +670,8 @@
             } else {
                 els.tablePreview.classList.add('hidden');
             }
+
+            // 更新變數按鈕
             els.variableButtons.innerHTML = '';
             state.headers.forEach(h => {
                 const btn = document.createElement('button');
@@ -525,6 +746,9 @@
             els.editor.focus();
 
             document.execCommand(command, false, value);
+            // 執行後同步更新狀態，確保顏色被記憶
+            state.bodyTemplate = els.editor.innerHTML;
+            saveState();
             closeAllMenus();
         }
 
@@ -533,50 +757,96 @@
             e.preventDefault();
             els.editor.focus();
             document.execCommand('insertText', false, variable);
+            // 更新狀態
+            state.bodyTemplate = els.editor.innerHTML;
+            saveState();
         }
 
         // 6. 渲染預覽
         function renderPreview() {
             const bodyTemplate = els.editor.innerHTML;
-            if (state.parsedData.length === 0) {
+            // 使用 displayData 進行渲染
+            if (state.displayData.length === 0) {
                 els.previewContainer.innerHTML = '<div class="text-center py-10 bg-gray-50 border border-dashed rounded-lg text-gray-500">沒有資料，請先至「匯入資料」頁籤貼上資料。</div>';
                 return;
             }
             els.previewContainer.innerHTML = '';
-            state.parsedData.forEach((row, index) => {
+
+            state.displayData.forEach((row, index) => {
                 const finalSubject = replaceVariables(state.subjectTemplate, row);
-                const finalCC = replaceVariables(state.ccTemplate, row);
+
+                // 優先使用資料中的 CC 欄位 (不分大小寫)
+                let dynamicCC = '';
+                const ccKey = Object.keys(row).find(k => k.toLowerCase().includes('cc') || k.includes('副本'));
+                if (ccKey && row[ccKey]) {
+                    dynamicCC = row[ccKey];
+                }
+                const finalCC = dynamicCC; // 這裡不再使用 fixed fallback
+
                 const finalBodyHtml = replaceVariables(bodyTemplate, row);
-                const plainTextBody = stripHtml(finalBodyHtml);
-                const mailtoLink = `mailto:${row['Email'] || row['email'] || ''}?cc=${finalCC}&subject=${encodeURIComponent(finalSubject)}&body=${encodeURIComponent(plainTextBody)}`;
+
+                // 收件人偵測邏輯 (不分大小寫)
+                let recipientEmail = '';
+                const recipientKey = Object.keys(row).find(k => ['email', '收件人', '信箱'].includes(k.toLowerCase()));
+                if (recipientKey && row[recipientKey]) {
+                    recipientEmail = row[recipientKey];
+                }
 
                 const card = document.createElement('div');
-                card.className = "bg-white border border-gray-200 rounded-lg shadow-sm";
+                card.className = "bg-white border border-gray-200 rounded-lg shadow-sm mb-6";
                 card.innerHTML = `
-                    <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-                        <div class="text-sm text-gray-600">
-                            <span class="font-bold text-gray-800">#${index + 1}</span> 
-                            <span class="mx-2">|</span>
-                            收件人: <span class="font-mono text-blue-700">${row['Email'] || row['email'] || '未填寫'}</span>
-                            ${finalCC ? `<span class="ml-3 text-gray-500">副本: ${finalCC}</span>` : ''}
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="copyToClipboard(this, ${index})" data-content="${encodeURIComponent(finalBodyHtml)}" class="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors shadow-sm">
-                                <i data-lucide="copy" class="h-4 w-4"></i> 複製格式內容
-                            </button>
-                            <a href="${mailtoLink}" class="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded text-sm hover:bg-gray-50 no-underline decoration-0">
-                                <i data-lucide="mail" class="h-4 w-4"></i> 僅文字開啟
-                            </a>
-                        </div>
+                    <div class="bg-gray-100 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
+                        <span class="font-bold text-gray-700">#${index + 1}</span>
                     </div>
                     <div class="p-4 space-y-3">
-                        <div class="flex gap-2 items-baseline border-b border-gray-100 pb-2">
-                            <span class="text-xs font-bold text-gray-400 uppercase w-10 flex-shrink-0">主旨</span>
-                            <p class="font-medium text-gray-900">${finalSubject}</p>
+                        <!-- 收件人 -->
+                        <div class="flex items-start gap-3">
+                            <span class="text-sm font-bold text-gray-500 w-14 pt-1.5 text-right">收件人</span>
+                            <div class="flex-1 flex gap-2">
+                                <div class="flex-1 p-2 bg-gray-50 rounded border border-gray-200 text-sm font-mono text-blue-700 break-all">
+                                    ${recipientEmail || '<span class="text-gray-400">未填寫</span>'}
+                                </div>
+                                <button onclick="copySimpleText(this, '${recipientEmail}')" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded border border-gray-200 transition-colors" title="複製收件人">
+                                    <i data-lucide="copy" class="w-4 h-4"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="flex gap-2 items-start">
-                            <span class="text-xs font-bold text-gray-400 uppercase w-10 flex-shrink-0 mt-1">內文</span>
-                            <div class="flex-1 p-3 bg-white border border-gray-200 rounded text-sm text-gray-800 leading-relaxed max-w-none email-content"
+
+                        <!-- 副本 -->
+                        <div class="flex items-start gap-3">
+                            <span class="text-sm font-bold text-gray-500 w-14 pt-1.5 text-right">副本</span>
+                            <div class="flex-1 flex gap-2">
+                                <div class="flex-1 p-2 bg-gray-50 rounded border border-gray-200 text-sm font-mono text-gray-600 break-all">
+                                    ${finalCC || '<span class="text-gray-400">無</span>'}
+                                </div>
+                                <button onclick="copySimpleText(this, '${finalCC}')" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded border border-gray-200 transition-colors" title="複製副本" ${!finalCC ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                                    <i data-lucide="copy" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 主旨 -->
+                        <div class="flex items-start gap-3">
+                            <span class="text-sm font-bold text-gray-500 w-14 pt-1.5 text-right">主旨</span>
+                            <div class="flex-1 flex gap-2">
+                                <div class="flex-1 p-2 bg-gray-50 rounded border border-gray-200 text-sm font-medium text-gray-900">
+                                    ${finalSubject}
+                                </div>
+                                <button onclick="copySimpleText(this, '${finalSubject}')" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded border border-gray-200 transition-colors" title="複製主旨">
+                                    <i data-lucide="copy" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 內文預覽 -->
+                        <div class="mt-4 pt-4 border-t border-gray-100">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold text-gray-400 uppercase">內文預覽</span>
+                                <button onclick="copyToClipboard(this, ${index})" data-content="${encodeURIComponent(finalBodyHtml)}" class="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors shadow-sm font-bold">
+                                    <i data-lucide="copy" class="h-4 w-4"></i> 複製內文 (含格式)
+                                </button>
+                            </div>
+                            <div class="p-4 bg-white border border-gray-200 rounded text-sm text-gray-800 leading-relaxed max-w-none email-content"
                                  style="font-family: Calibri, sans-serif; font-size: 12pt;">
                                 ${finalBodyHtml}
                             </div>
@@ -612,6 +882,38 @@
                 };
                 return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
             });
+        }
+
+        // 複製純文字功能 (收件人、副本、主旨)
+        function copySimpleText(btn, text) {
+            if (!text) return;
+
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+
+            try {
+                document.execCommand('copy');
+
+                // Visual feedback
+                const originalIcon = btn.innerHTML;
+                btn.innerHTML = `<i data-lucide="check" class="w-4 h-4 text-green-600"></i>`;
+                lucide.createIcons();
+
+                setTimeout(() => {
+                    btn.innerHTML = originalIcon;
+                    lucide.createIcons();
+                }, 1500);
+
+            } catch (err) {
+                console.error('Copy failed', err);
+                alert('複製失敗');
+            } finally {
+                document.body.removeChild(textarea);
+            }
         }
 
         // 9. 複製到剪貼簿 (Outlook 專用邏輯 - 使用 clipboardData 攔截)
