@@ -143,13 +143,13 @@
                     <ul class="list-disc list-inside mt-1 ml-1 space-y-1">
                         <li>請直接從 Excel 複製表格內容（含標題列）並貼在下方。</li>
                         <li>第一列必須是「標題」（例如：姓名、Email、CC），這些將成為變數。</li>
+                        <li><strong>動態超連結：</strong>若要讓每封信的連結不同，請在「插入超連結」時，網址欄位輸入變數，例如 <code>{課程網址}</code>。</li>
                         <li class="text-blue-700 bg-blue-50 py-1 px-2 rounded -ml-2 my-1 inline-block font-semibold">
                             自動抓取關鍵字：
                             <br>• 收件人：Email、email、信箱、收件人
                             <br>• 副本：CC、cc、副本
                             <br>• 密件副本：BCC、bcc、密件副本
                         </li>
-                        <li><strong>自動儲存：</strong>您的資料會自動儲存在此瀏覽器中，關閉後再打開不會消失。</li>
                     </ul>
                 </div>
 
@@ -211,7 +211,6 @@
                         <input type="text" id="subject-input"
                             class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
-                    <!-- 移除固定副本輸入框 -->
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">內文 (預設字體: Calibri, 12pt)</label>
@@ -727,7 +726,7 @@
             e.preventDefault();
             els.editor.focus();
             if (command === 'createLink') {
-                const url = prompt("請輸入網址：", "https://");
+                const url = prompt("請輸入網址 (可輸入 {變數} )：", "https://");
                 if (url) {
                     document.execCommand(command, false, url);
                 }
@@ -928,8 +927,15 @@
         function replaceVariables(template, rowData) {
             let result = template;
             state.headers.forEach(header => {
-                const regex = new RegExp(`{${header}}`, 'g');
-                result = result.replace(regex, rowData[header] || '');
+                const value = rowData[header] || '';
+
+                // 1. Replace standard {Header}
+                result = result.split(`{${header}}`).join(value);
+
+                // 2. Replace encoded %7BHeader%7D (for href attributes)
+                // Note: encodeURIComponent('{') is %7B, '}' is %7D.
+                const encodedKey = `%7B${header}%7D`;
+                result = result.split(encodedKey).join(value);
             });
             return result;
         }
@@ -1082,11 +1088,6 @@
         }
 
         // 啟動
-        init();
-    </script>
-</body>
-
-</html>
         init();
     </script>
 </body>
