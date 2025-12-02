@@ -74,6 +74,17 @@
         .color-menu.open {
             display: block;
         }
+
+        /* BCC 行顯示控制 */
+        .bcc-row {
+            display: none;
+            /* 預設隱藏 */
+        }
+
+        .show-bcc .bcc-row {
+            display: flex;
+            /* 開啟時顯示 */
+        }
     </style>
 </head>
 
@@ -136,6 +147,7 @@
                             自動抓取關鍵字：
                             <br>• 收件人：Email、email、信箱、收件人
                             <br>• 副本：CC、cc、副本
+                            <br>• 密件副本：BCC、bcc、密件副本
                         </li>
                         <li><strong>自動儲存：</strong>您的資料會自動儲存在此瀏覽器中，關閉後再打開不會消失。</li>
                     </ul>
@@ -160,7 +172,7 @@
                             <select id="group-column"
                                 class="p-1.5 border border-gray-300 rounded text-sm outline-none focus:border-blue-500 bg-white"
                                 onchange="updateGroupingColumn()"></select>
-                            <span class="text-xs text-gray-500 ml-1">(相同值的列將合併，Email 與 副本 用分號串接，其他用頓號串接)</span>
+                            <span class="text-xs text-gray-500 ml-1">(相同值的列將合併，Email / 副本 / BCC 用分號串接，其他用頓號串接)</span>
                         </div>
                     </div>
                 </div>
@@ -318,9 +330,18 @@
 
             <!-- STEP 3: PREVIEW & GENERATE -->
             <div id="tab-preview" class="tab-content space-y-6">
-                <h2 class="text-xl font-semibold flex items-center gap-2">
-                    <i data-lucide="play" class="h-5 w-5 text-blue-600"></i> 草稿預覽
-                </h2>
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-semibold flex items-center gap-2">
+                        <i data-lucide="play" class="h-5 w-5 text-blue-600"></i> 草稿預覽
+                    </h2>
+                    <!-- BCC 顯示開關 -->
+                    <label
+                        class="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-600 hover:text-gray-900">
+                        <input type="checkbox" id="bcc-toggle" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            onchange="toggleBCC()">
+                        顯示密件副本 (BCC)
+                    </label>
+                </div>
 
                 <div id="preview-container" class="grid gap-6">
                     <!-- 預覽卡片將生成於此 -->
@@ -351,10 +372,11 @@
             displayData: [], // 實際顯示資料 (可能經過合併)
             headers: [],
             bodyTemplate: defaultBody,
-            grouping: { enabled: false, column: '' } // 新增合併設定
+            grouping: { enabled: false, column: '' },
+            showBCC: false // BCC 顯示狀態
         };
 
-        const STORAGE_KEY = 'email_generator_state_v3'; // 更新 key 避免舊資料衝突
+        const STORAGE_KEY = 'email_generator_state_v4'; // 更新 key
         let savedRange = null;
 
         // DOM 元素引用
@@ -370,6 +392,7 @@
             groupEnable: document.getElementById('group-enable'),
             groupSettings: document.getElementById('group-settings'),
             groupColumn: document.getElementById('group-column'),
+            bccToggle: document.getElementById('bcc-toggle'), // BCC 開關
             btns: {
                 data: document.getElementById('btn-tab-data'),
                 template: document.getElementById('btn-tab-template'),
@@ -396,6 +419,10 @@
             els.groupEnable.checked = state.grouping.enabled;
             if (state.grouping.enabled) els.groupSettings.classList.remove('hidden');
 
+            // 設定 BCC 開關
+            els.bccToggle.checked = state.showBCC;
+            updateBCCVisibility();
+
             // 3. 綁定事件 - 加入自動儲存
             els.csvInput.addEventListener('input', (e) => {
                 state.csvInput = e.target.value;
@@ -421,8 +448,24 @@
                 }
             });
 
-            parseData(); // 初次解析 (會觸發 applyGrouping)
+            parseData(); // 初次解析
             lucide.createIcons();
+        }
+
+        // --- BCC 顯示邏輯 ---
+        function toggleBCC() {
+            state.showBCC = els.bccToggle.checked;
+            updateBCCVisibility();
+            saveState();
+        }
+
+        function updateBCCVisibility() {
+            const container = els.previewContainer;
+            if (state.showBCC) {
+                container.classList.add('show-bcc');
+            } else {
+                container.classList.remove('show-bcc');
+            }
         }
 
         // --- 儲存與讀取狀態 ---
@@ -432,9 +475,9 @@
                 const dataToSave = {
                     csvInput: state.csvInput,
                     subjectTemplate: state.subjectTemplate,
-                    // ccTemplate: state.ccTemplate, // 移除
                     bodyTemplate: state.bodyTemplate,
-                    grouping: state.grouping
+                    grouping: state.grouping,
+                    showBCC: state.showBCC
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
             } catch (e) {
@@ -449,12 +492,11 @@
                     const parsed = JSON.parse(saved);
                     state.csvInput = parsed.csvInput !== undefined ? parsed.csvInput : defaultData;
                     state.subjectTemplate = parsed.subjectTemplate !== undefined ? parsed.subjectTemplate : '關於 {學校} 的 {課程名稱} 開課通知';
-                    // state.ccTemplate = parsed.ccTemplate !== undefined ? parsed.ccTemplate : ''; // 移除
                     state.bodyTemplate = parsed.bodyTemplate !== undefined ? parsed.bodyTemplate : defaultBody;
                     // 讀取合併設定
-                    if (parsed.grouping) {
-                        state.grouping = parsed.grouping;
-                    }
+                    if (parsed.grouping) state.grouping = parsed.grouping;
+                    // 讀取 BCC 設定
+                    if (parsed.showBCC !== undefined) state.showBCC = parsed.showBCC;
                 }
             } catch (e) {
                 console.error("讀取失敗，使用預設值", e);
@@ -474,11 +516,9 @@
         function clearTemplate() {
             if (confirm("確定要清空主旨與內文模板嗎？此動作無法復原。")) {
                 state.subjectTemplate = "";
-                // state.ccTemplate = ""; // 移除
                 state.bodyTemplate = "";
 
                 els.subjectInput.value = "";
-                // els.ccInput.value = ""; // 移除
                 els.editor.innerHTML = "";
 
                 saveState();
@@ -535,8 +575,7 @@
                     const key = row[targetCol] || '(未分類)';
 
                     if (!groupMap.has(key)) {
-                        // 初始化群組，複製第一筆資料的所有欄位作為基礎
-                        // 但將每個欄位的值轉為陣列，方便後續加入
+                        // 初始化群組
                         const initialObj = {};
                         state.headers.forEach(h => {
                             initialObj[h] = [row[h]];
@@ -560,13 +599,14 @@
                         // 去除重複值 (Set)
                         const uniqueValues = [...new Set(values)];
 
-                        // 判定是否為收件人或副本欄位 (不分大小寫)
+                        // 判定特殊欄位 (不分大小寫)
                         const hLower = h.toLowerCase();
                         const isRecipient = hLower === 'email' || h === '收件人' || h === '信箱';
                         const isCC = hLower === 'cc' || h === '副本';
+                        const isBCC = hLower === 'bcc' || h === '密件副本';
 
-                        if (isRecipient || isCC) {
-                            // Email 和 副本 用分號串接 (Outlook 格式)
+                        if (isRecipient || isCC || isBCC) {
+                            // Email / 副本 / BCC 用分號串接 (Outlook 格式)
                             finalRow[h] = uniqueValues.join('; ');
                         } else if (h === targetCol) {
                             // 分組依據欄位保持單一值
@@ -775,22 +815,35 @@
             state.displayData.forEach((row, index) => {
                 const finalSubject = replaceVariables(state.subjectTemplate, row);
 
-                // 優先使用資料中的 CC 欄位 (不分大小寫)
+                // --- 自動抓取欄位邏輯 (優先權高) ---
                 let dynamicCC = '';
-                const ccKey = Object.keys(row).find(k => k.toLowerCase().includes('cc') || k.includes('副本'));
-                if (ccKey && row[ccKey]) {
-                    dynamicCC = row[ccKey];
-                }
-                const finalCC = dynamicCC; // 這裡不再使用 fixed fallback
+                let dynamicBCC = '';
+                let recipientEmail = '';
+
+                // 遍歷所有 Key 尋找對應欄位
+                Object.keys(row).forEach(k => {
+                    const kLower = k.toLowerCase();
+                    // 收件人
+                    if (['email', '收件人', '信箱'].includes(kLower)) {
+                        recipientEmail = row[k];
+                    }
+                    // 副本
+                    if (kLower.includes('cc') || k.includes('副本')) {
+                        // 排除 "密件副本" (BCC)
+                        if (!kLower.includes('bcc') && !k.includes('密件')) {
+                            dynamicCC = row[k];
+                        }
+                    }
+                    // 密件副本
+                    if (kLower.includes('bcc') || k.includes('密件')) {
+                        dynamicBCC = row[k];
+                    }
+                });
+
+                const finalCC = dynamicCC;
+                const finalBCC = dynamicBCC;
 
                 const finalBodyHtml = replaceVariables(bodyTemplate, row);
-
-                // 收件人偵測邏輯 (不分大小寫)
-                let recipientEmail = '';
-                const recipientKey = Object.keys(row).find(k => ['email', '收件人', '信箱'].includes(k.toLowerCase()));
-                if (recipientKey && row[recipientKey]) {
-                    recipientEmail = row[recipientKey];
-                }
 
                 const card = document.createElement('div');
                 card.className = "bg-white border border-gray-200 rounded-lg shadow-sm mb-6";
@@ -820,6 +873,19 @@
                                     ${finalCC || '<span class="text-gray-400">無</span>'}
                                 </div>
                                 <button onclick="copySimpleText(this, '${finalCC}')" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded border border-gray-200 transition-colors" title="複製副本" ${!finalCC ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                                    <i data-lucide="copy" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 密件副本 (隱藏/顯示) -->
+                        <div class="items-start gap-3 bcc-row">
+                            <span class="text-sm font-bold text-gray-500 w-14 pt-1.5 text-right">密件副本</span>
+                            <div class="flex-1 flex gap-2">
+                                <div class="flex-1 p-2 bg-gray-50 rounded border border-gray-200 text-sm font-mono text-gray-600 break-all">
+                                    ${finalBCC || '<span class="text-gray-400">無</span>'}
+                                </div>
+                                <button onclick="copySimpleText(this, '${finalBCC}')" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded border border-gray-200 transition-colors" title="複製密件副本" ${!finalBCC ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
                                     <i data-lucide="copy" class="w-4 h-4"></i>
                                 </button>
                             </div>
@@ -855,6 +921,7 @@
                 `;
                 els.previewContainer.appendChild(card);
             });
+            updateBCCVisibility(); // 確保 BCC 狀態正確
             lucide.createIcons();
         }
 
@@ -1015,6 +1082,11 @@
         }
 
         // 啟動
+        init();
+    </script>
+</body>
+
+</html>
         init();
     </script>
 </body>
