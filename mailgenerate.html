@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>信件生成器</title>
+    <title>信件生成器 (Outlook專用版)</title>
     <!-- 引入 Tailwind CSS 進行樣式設定 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 設定自訂主題色票 -->
@@ -34,7 +35,9 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* 共用的列表樣式：針對編輯器、預覽區塊以及複製用的隱藏區塊 */
-        #editor-content, .email-content, .outlook-copy-wrapper {
+        #editor-content,
+        .email-content,
+        .outlook-copy-wrapper {
             font-family: 'Calibri', sans-serif;
             font-size: 12pt;
             line-height: 1.5;
@@ -42,24 +45,34 @@
         }
 
         /* 超連結樣式：強制藍色底線 (保持 Outlook 兼容性，不隨 UI 主題變色) */
-        #editor-content a, .email-content a, .outlook-copy-wrapper a {
+        #editor-content a,
+        .email-content a,
+        .outlook-copy-wrapper a {
             color: blue !important;
             text-decoration: underline !important;
             cursor: pointer;
         }
-        
+
         /* 強制復原列表樣式 */
-        #editor-content ul, .email-content ul, .outlook-copy-wrapper ul {
+        #editor-content ul,
+        .email-content ul,
+        .outlook-copy-wrapper ul {
             list-style-type: disc !important;
             margin-left: 24px !important;
             margin-bottom: 8px;
         }
-        #editor-content ol, .email-content ol, .outlook-copy-wrapper ol {
+
+        #editor-content ol,
+        .email-content ol,
+        .outlook-copy-wrapper ol {
             list-style-type: decimal !important;
             margin-left: 24px !important;
             margin-bottom: 8px;
         }
-        #editor-content li, .email-content li, .outlook-copy-wrapper li {
+
+        #editor-content li,
+        .email-content li,
+        .outlook-copy-wrapper li {
             padding-left: 4px;
         }
 
@@ -72,38 +85,55 @@
         .tab-content {
             display: none;
         }
+
         .tab-content.active {
             display: block;
         }
-        
+
         /* 色盤選單樣式 */
         .color-menu {
             display: none;
         }
+
         .color-menu.open {
             display: block;
         }
 
         /* BCC 行顯示控制 */
         .bcc-row {
-            display: none; /* 預設隱藏 */
+            display: none;
+            /* 預設隱藏 */
         }
+
         .show-bcc .bcc-row {
-            display: flex; /* 開啟時顯示 */
+            display: flex;
+            /* 開啟時顯示 */
         }
-        
+
         /* 自訂輸入框 Focus 樣式覆蓋 */
-        input:focus, textarea:focus, select:focus, #editor-content:focus {
+        input:focus,
+        textarea:focus,
+        select:focus,
+        #editor-content:focus {
             outline: none;
             border-color: #a87b00 !important;
             box-shadow: 0 0 0 3px rgba(168, 123, 0, 0.2) !important;
         }
+
+        /* 表格固定表頭 */
+        thead.sticky-header th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
+
 <body class="bg-warm-bg text-warm-black font-sans min-h-screen p-4">
 
     <div class="max-w-5xl mx-auto bg-card-bg rounded-xl shadow-soft overflow-hidden border border-warm-border">
-        
+
         <!-- Header -->
         <div class="bg-primary p-6 text-white flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
@@ -112,13 +142,16 @@
                 </h1>
             </div>
             <div class="flex gap-2 w-full sm:w-auto overflow-x-auto">
-                <button onclick="switchTab('data')" id="btn-tab-data" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-white text-primary shadow-sm">
+                <button onclick="switchTab('data')" id="btn-tab-data"
+                    class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-white text-primary shadow-sm">
                     1. 匯入資料
                 </button>
-                <button onclick="switchTab('template')" id="btn-tab-template" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-primary-hover text-white hover:bg-[#6e5000]">
+                <button onclick="switchTab('template')" id="btn-tab-template"
+                    class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-primary-hover text-white hover:bg-[#6e5000]">
                     2. 編輯模板
                 </button>
-                <button onclick="switchTab('preview')" id="btn-tab-preview" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-primary-hover text-white hover:bg-[#6e5000]">
+                <button onclick="switchTab('preview')" id="btn-tab-preview"
+                    class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-primary-hover text-white hover:bg-[#6e5000]">
                     3. 草稿預覽
                 </button>
             </div>
@@ -135,22 +168,28 @@
                             <i data-lucide="users" class="h-5 w-5"></i> 資料來源
                         </h2>
                         <!-- 清空資料按鈕 -->
-                        <button onclick="clearData()" class="text-xs flex items-center gap-1 text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded transition-colors border border-transparent hover:border-red-200" title="清空所有資料">
+                        <button onclick="clearData()"
+                            class="text-xs flex items-center gap-1 text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded transition-colors border border-transparent hover:border-red-200"
+                            title="清空所有資料">
                             <i data-lucide="trash-2" class="w-3 h-3"></i> 清空資料
                         </button>
                     </div>
-                    <span id="data-count" class="text-sm text-warm-gray bg-warm-bg border border-warm-border px-3 py-1 rounded-full">
+                    <span id="data-count"
+                        class="text-sm text-warm-gray bg-warm-bg border border-warm-border px-3 py-1 rounded-full">
                         共 0 筆
                     </span>
                 </div>
-                
+
                 <div class="bg-info-bg p-4 rounded-lg border border-info-border text-sm text-info-text mb-4 shadow-sm">
-                    <p class="font-bold flex items-center gap-2"><i data-lucide="alert-circle" class="h-4 w-4"></i> 使用說明：</p>
+                    <p class="font-bold flex items-center gap-2"><i data-lucide="alert-circle" class="h-4 w-4"></i>
+                        使用說明：</p>
                     <ul class="list-disc list-inside mt-1 ml-1 space-y-1">
-                        <li>請直接從 Excel 複製表格內容（含標題列）並貼在下方。</li>
+                        <li>請直接從 Excel/Google Sheets 複製表格內容並貼在下方。</li>
+                        <li><strong>支援多行資料：</strong>若同一格有多個 Email (換行分隔)，系統會自動辨識並處理。</li>
                         <li>第一列必須是「標題」（例如：姓名、Email、CC），這些將成為變數。</li>
                         <li><strong>動態超連結：</strong>若要讓每封信的連結不同，請在「插入超連結」時，網址欄位輸入變數，例如 <code>{課程網址}</code>。</li>
-                        <li class="text-primary bg-white border border-info-border py-1 px-2 rounded -ml-2 my-1 inline-block font-semibold shadow-sm">
+                        <li
+                            class="text-primary bg-white border border-info-border py-1 px-2 rounded -ml-2 my-1 inline-block font-semibold shadow-sm">
                             自動抓取關鍵字：
                             <br>• 收件人：Email、email、信箱、收件人
                             <br>• 副本：CC、cc、副本
@@ -159,25 +198,34 @@
                     </ul>
                 </div>
 
-                <textarea id="csv-input" class="w-full h-64 p-4 border border-warm-border rounded-lg font-mono text-sm text-warm-black focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-shadow" placeholder="在此貼上 Excel 資料..."></textarea>
+                <textarea id="csv-input"
+                    class="w-full h-64 p-4 border border-warm-border rounded-lg font-mono text-sm text-warm-black focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-shadow"
+                    placeholder="在此貼上 Excel 資料..."></textarea>
 
                 <!-- 合併寄信設定區塊 -->
                 <div class="bg-warm-bg p-4 rounded-lg border border-warm-border mt-2 shadow-sm">
                     <div class="flex flex-col sm:flex-row sm:items-center gap-4">
                         <label class="flex items-center gap-2 cursor-pointer select-none">
-                            <input type="checkbox" id="group-enable" class="w-4 h-4 text-primary rounded focus:ring-primary border-warm-border" onchange="toggleGrouping()">
+                            <input type="checkbox" id="group-enable"
+                                class="w-4 h-4 text-primary rounded focus:ring-primary border-warm-border"
+                                onchange="toggleGrouping()">
                             <span class="font-medium text-warm-black">啟用合併寄信 (Group Merge)</span>
                         </label>
-                        
-                        <div id="group-settings" class="hidden flex flex-col sm:flex-row sm:items-center gap-2 animate-fade-in">
+
+                        <div id="group-settings"
+                            class="hidden flex flex-col sm:flex-row sm:items-center gap-2 animate-fade-in">
                             <span class="text-sm text-warm-gray">依據欄位合併：</span>
-                            <select id="group-column" class="p-1.5 border border-warm-border rounded text-sm outline-none focus:border-primary bg-white text-warm-black" onchange="updateGroupingColumn()"></select>
+                            <select id="group-column"
+                                class="p-1.5 border border-warm-border rounded text-sm outline-none focus:border-primary bg-white text-warm-black"
+                                onchange="updateGroupingColumn()"></select>
                             <span class="text-xs text-warm-gray ml-1">(相同值的列將合併，Email / 副本 / BCC 用分號串接，其他用頓號串接)</span>
                         </div>
                     </div>
                 </div>
 
-                <div id="table-preview-container" class="overflow-x-auto border border-warm-border rounded-lg mt-4 hidden">
+                <!-- 預覽表格容器：加入最大高度與垂直捲軸 -->
+                <div id="table-preview-container"
+                    class="overflow-x-auto overflow-y-auto max-h-[500px] border border-warm-border rounded-lg mt-4 hidden">
                     <!-- 表格預覽將生成於此 -->
                 </div>
             </div>
@@ -190,11 +238,13 @@
                             <i data-lucide="file-text" class="h-5 w-5"></i> 信件模板
                         </h2>
                         <!-- 清空模板按鈕 -->
-                        <button onclick="clearTemplate()" class="text-xs flex items-center gap-1 text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded transition-colors border border-transparent hover:border-red-200" title="清空主旨與內文">
+                        <button onclick="clearTemplate()"
+                            class="text-xs flex items-center gap-1 text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded transition-colors border border-transparent hover:border-red-200"
+                            title="清空主旨與內文">
                             <i data-lucide="trash-2" class="w-3 h-3"></i> 清空模板
                         </button>
                     </div>
-                    
+
                     <div class="w-1/3 text-right">
                         <span class="text-xs text-warm-gray block mb-1">插入變數</span>
                         <div id="variable-buttons" class="flex flex-wrap gap-1 justify-end">
@@ -206,58 +256,100 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-warm-gray mb-1">主旨</label>
-                        <input type="text" id="subject-input" class="w-full p-2 border border-warm-border rounded-md text-warm-black focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-shadow">
+                        <input type="text" id="subject-input"
+                            class="w-full p-2 border border-warm-border rounded-md text-warm-black focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-shadow">
                     </div>
-                    
+
                     <div>
                         <label class="block text-sm font-medium text-warm-gray mb-1">內文 (預設字體: Calibri, 12pt)</label>
-                        
+
                         <!-- Toolbar -->
-                        <div class="flex flex-wrap gap-1 p-2 bg-warm-bg border border-b-0 border-warm-border rounded-t-md select-none items-center relative">
-                            <button onmousedown="handleToolbar(event, 'bold')" class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors" title="粗體"><i data-lucide="bold" class="w-4 h-4"></i></button>
-                            <button onmousedown="handleToolbar(event, 'italic')" class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors" title="斜體"><i data-lucide="italic" class="w-4 h-4"></i></button>
-                            <button onmousedown="handleToolbar(event, 'underline')" class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors" title="底線"><i data-lucide="underline" class="w-4 h-4"></i></button>
-                            
+                        <div
+                            class="flex flex-wrap gap-1 p-2 bg-warm-bg border border-b-0 border-warm-border rounded-t-md select-none items-center relative">
+                            <button onmousedown="handleToolbar(event, 'bold')"
+                                class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors"
+                                title="粗體"><i data-lucide="bold" class="w-4 h-4"></i></button>
+                            <button onmousedown="handleToolbar(event, 'italic')"
+                                class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors"
+                                title="斜體"><i data-lucide="italic" class="w-4 h-4"></i></button>
+                            <button onmousedown="handleToolbar(event, 'underline')"
+                                class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors"
+                                title="底線"><i data-lucide="underline" class="w-4 h-4"></i></button>
+
                             <div class="w-px h-6 bg-warm-border mx-1 self-center"></div>
-                            
+
                             <!-- 文字顏色 (Dropdown) -->
                             <div class="relative inline-block">
-                                <button onmousedown="toggleColorMenu(event, 'text-color-menu')" class="p-1.5 hover:bg-white hover:text-primary rounded flex items-center gap-1 text-warm-gray transition-colors" title="文字顏色">
+                                <button onmousedown="toggleColorMenu(event, 'text-color-menu')"
+                                    class="p-1.5 hover:bg-white hover:text-primary rounded flex items-center gap-1 text-warm-gray transition-colors"
+                                    title="文字顏色">
                                     <i data-lucide="type" class="w-4 h-4"></i>
                                     <div class="w-3 h-3 rounded-full bg-black border border-warm-border"></div>
                                 </button>
                                 <!-- 色盤選單 -->
-                                <div id="text-color-menu" class="color-menu absolute top-full left-0 mt-1 p-3 bg-white border border-warm-border shadow-soft rounded-lg z-50 w-40">
+                                <div id="text-color-menu"
+                                    class="color-menu absolute top-full left-0 mt-1 p-3 bg-white border border-warm-border shadow-soft rounded-lg z-50 w-40">
                                     <div class="text-xs text-warm-gray mb-2 font-bold">常用顏色</div>
                                     <div class="grid grid-cols-4 gap-2">
-                                        <button onmousedown="applyColor(event, 'foreColor', '#000000')" class="w-6 h-6 rounded-full bg-black border border-warm-border hover:scale-110 transition-transform shadow-sm" title="黑色"></button>
-                                        <button onmousedown="applyColor(event, 'foreColor', '#FF0000')" class="w-6 h-6 rounded-full bg-red-600 border border-warm-border hover:scale-110 transition-transform shadow-sm" title="紅色"></button>
-                                        <button onmousedown="applyColor(event, 'foreColor', '#0000FF')" class="w-6 h-6 rounded-full bg-blue-600 border border-warm-border hover:scale-110 transition-transform shadow-sm" title="藍色"></button>
-                                        <button onmousedown="applyColor(event, 'foreColor', '#008000')" class="w-6 h-6 rounded-full bg-green-600 border border-warm-border hover:scale-110 transition-transform shadow-sm" title="綠色"></button>
-                                        <button onmousedown="applyColor(event, 'foreColor', '#FFA500')" class="w-6 h-6 rounded-full bg-orange-500 border border-warm-border hover:scale-110 transition-transform shadow-sm" title="橘色"></button>
-                                        <button onmousedown="applyColor(event, 'foreColor', '#800080')" class="w-6 h-6 rounded-full bg-purple-600 border border-warm-border hover:scale-110 transition-transform shadow-sm" title="紫色"></button>
-                                        <button onmousedown="applyColor(event, 'foreColor', '#808080')" class="w-6 h-6 rounded-full bg-gray-500 border border-warm-border hover:scale-110 transition-transform shadow-sm" title="灰色"></button>
-                                        <button onmousedown="applyColor(event, 'foreColor', '#FFFFFF')" class="w-6 h-6 rounded-full bg-white border border-warm-border hover:scale-110 transition-transform shadow-sm" title="白色"></button>
+                                        <button onmousedown="applyColor(event, 'foreColor', '#000000')"
+                                            class="w-6 h-6 rounded-full bg-black border border-warm-border hover:scale-110 transition-transform shadow-sm"
+                                            title="黑色"></button>
+                                        <button onmousedown="applyColor(event, 'foreColor', '#FF0000')"
+                                            class="w-6 h-6 rounded-full bg-red-600 border border-warm-border hover:scale-110 transition-transform shadow-sm"
+                                            title="紅色"></button>
+                                        <button onmousedown="applyColor(event, 'foreColor', '#0000FF')"
+                                            class="w-6 h-6 rounded-full bg-blue-600 border border-warm-border hover:scale-110 transition-transform shadow-sm"
+                                            title="藍色"></button>
+                                        <button onmousedown="applyColor(event, 'foreColor', '#008000')"
+                                            class="w-6 h-6 rounded-full bg-green-600 border border-warm-border hover:scale-110 transition-transform shadow-sm"
+                                            title="綠色"></button>
+                                        <button onmousedown="applyColor(event, 'foreColor', '#FFA500')"
+                                            class="w-6 h-6 rounded-full bg-orange-500 border border-warm-border hover:scale-110 transition-transform shadow-sm"
+                                            title="橘色"></button>
+                                        <button onmousedown="applyColor(event, 'foreColor', '#800080')"
+                                            class="w-6 h-6 rounded-full bg-purple-600 border border-warm-border hover:scale-110 transition-transform shadow-sm"
+                                            title="紫色"></button>
+                                        <button onmousedown="applyColor(event, 'foreColor', '#808080')"
+                                            class="w-6 h-6 rounded-full bg-gray-500 border border-warm-border hover:scale-110 transition-transform shadow-sm"
+                                            title="灰色"></button>
+                                        <button onmousedown="applyColor(event, 'foreColor', '#FFFFFF')"
+                                            class="w-6 h-6 rounded-full bg-white border border-warm-border hover:scale-110 transition-transform shadow-sm"
+                                            title="白色"></button>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- 背景顏色 (Dropdown) -->
                             <div class="relative inline-block">
-                                <button onmousedown="toggleColorMenu(event, 'bg-color-menu')" class="p-1.5 hover:bg-white hover:text-primary rounded flex items-center gap-1 text-warm-gray transition-colors" title="背景顏色 (螢光筆)">
+                                <button onmousedown="toggleColorMenu(event, 'bg-color-menu')"
+                                    class="p-1.5 hover:bg-white hover:text-primary rounded flex items-center gap-1 text-warm-gray transition-colors"
+                                    title="背景顏色 (螢光筆)">
                                     <i data-lucide="highlighter" class="w-4 h-4"></i>
                                     <div class="w-3 h-3 rounded-full bg-yellow-300 border border-warm-border"></div>
                                 </button>
                                 <!-- 色盤選單 -->
-                                <div id="bg-color-menu" class="color-menu absolute top-full left-0 mt-1 p-3 bg-white border border-warm-border shadow-soft rounded-lg z-50 w-40">
+                                <div id="bg-color-menu"
+                                    class="color-menu absolute top-full left-0 mt-1 p-3 bg-white border border-warm-border shadow-soft rounded-lg z-50 w-40">
                                     <div class="text-xs text-warm-gray mb-2 font-bold">螢光筆</div>
                                     <div class="grid grid-cols-4 gap-2">
-                                        <button onmousedown="applyColor(event, 'hiliteColor', '#FFFF00')" class="w-6 h-6 rounded-full bg-yellow-300 border border-warm-border hover:scale-110 transition-transform shadow-sm" title="黃色"></button>
-                                        <button onmousedown="applyColor(event, 'hiliteColor', '#00FF00')" class="w-6 h-6 rounded-full bg-green-300 border border-warm-border hover:scale-110 transition-transform shadow-sm" title="綠色"></button>
-                                        <button onmousedown="applyColor(event, 'hiliteColor', '#00FFFF')" class="w-6 h-6 rounded-full bg-cyan-300 border border-warm-border hover:scale-110 transition-transform shadow-sm" title="藍色"></button>
-                                        <button onmousedown="applyColor(event, 'hiliteColor', '#FF00FF')" class="w-6 h-6 rounded-full bg-pink-300 border border-warm-border hover:scale-110 transition-transform shadow-sm" title="粉色"></button>
-                                        <button onmousedown="applyColor(event, 'hiliteColor', '#D1D5DB')" class="w-6 h-6 rounded-full bg-gray-300 border border-warm-border hover:scale-110 transition-transform shadow-sm" title="灰色"></button>
-                                        <button onmousedown="applyColor(event, 'hiliteColor', 'transparent')" class="w-6 h-6 rounded-full bg-white border border-warm-border hover:scale-110 transition-transform shadow-sm relative text-red-500 flex items-center justify-center font-bold" title="清除">
+                                        <button onmousedown="applyColor(event, 'hiliteColor', '#FFFF00')"
+                                            class="w-6 h-6 rounded-full bg-yellow-300 border border-warm-border hover:scale-110 transition-transform shadow-sm"
+                                            title="黃色"></button>
+                                        <button onmousedown="applyColor(event, 'hiliteColor', '#00FF00')"
+                                            class="w-6 h-6 rounded-full bg-green-300 border border-warm-border hover:scale-110 transition-transform shadow-sm"
+                                            title="綠色"></button>
+                                        <button onmousedown="applyColor(event, 'hiliteColor', '#00FFFF')"
+                                            class="w-6 h-6 rounded-full bg-cyan-300 border border-warm-border hover:scale-110 transition-transform shadow-sm"
+                                            title="藍色"></button>
+                                        <button onmousedown="applyColor(event, 'hiliteColor', '#FF00FF')"
+                                            class="w-6 h-6 rounded-full bg-pink-300 border border-warm-border hover:scale-110 transition-transform shadow-sm"
+                                            title="粉色"></button>
+                                        <button onmousedown="applyColor(event, 'hiliteColor', '#D1D5DB')"
+                                            class="w-6 h-6 rounded-full bg-gray-300 border border-warm-border hover:scale-110 transition-transform shadow-sm"
+                                            title="灰色"></button>
+                                        <button onmousedown="applyColor(event, 'hiliteColor', 'transparent')"
+                                            class="w-6 h-6 rounded-full bg-white border border-warm-border hover:scale-110 transition-transform shadow-sm relative text-red-500 flex items-center justify-center font-bold"
+                                            title="清除">
                                             <i data-lucide="x" class="w-3 h-3"></i>
                                         </button>
                                     </div>
@@ -265,17 +357,24 @@
                             </div>
 
                             <div class="w-px h-6 bg-warm-border mx-1 self-center"></div>
-                            
-                            <button onmousedown="handleToolbar(event, 'insertUnorderedList')" class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors" title="項目符號"><i data-lucide="list" class="w-4 h-4"></i></button>
-                            
+
+                            <button onmousedown="handleToolbar(event, 'insertUnorderedList')"
+                                class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors"
+                                title="項目符號"><i data-lucide="list" class="w-4 h-4"></i></button>
+
                             <div class="w-px h-6 bg-warm-border mx-1 self-center"></div>
 
-                            <button onmousedown="handleToolbar(event, 'createLink')" class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors" title="插入超連結"><i data-lucide="link" class="w-4 h-4"></i></button>
-                            <button onmousedown="handleToolbar(event, 'unlink')" class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors" title="移除超連結"><i data-lucide="link-2-off" class="w-4 h-4"></i></button>
+                            <button onmousedown="handleToolbar(event, 'createLink')"
+                                class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors"
+                                title="插入超連結"><i data-lucide="link" class="w-4 h-4"></i></button>
+                            <button onmousedown="handleToolbar(event, 'unlink')"
+                                class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors"
+                                title="移除超連結"><i data-lucide="link-2-off" class="w-4 h-4"></i></button>
                         </div>
 
                         <!-- Content Editable Div -->
-                        <div id="editor-content" contenteditable="true" class="w-full p-4 border border-warm-border rounded-b-md focus:ring-2 focus:ring-primary focus:border-primary outline-none overflow-y-auto transition-shadow">
+                        <div id="editor-content" contenteditable="true"
+                            class="w-full p-4 border border-warm-border rounded-b-md focus:ring-2 focus:ring-primary focus:border-primary outline-none overflow-y-auto transition-shadow">
                         </div>
                     </div>
                 </div>
@@ -288,15 +387,19 @@
                         <i data-lucide="play" class="h-5 w-5"></i> 草稿預覽
                     </h2>
                     <!-- BCC 顯示開關 -->
-                    <label class="flex items-center gap-2 cursor-pointer select-none text-sm text-warm-gray hover:text-primary transition-colors">
-                        <input type="checkbox" id="bcc-toggle" class="w-4 h-4 text-primary rounded focus:ring-primary border-warm-border" onchange="toggleBCC()">
+                    <label
+                        class="flex items-center gap-2 cursor-pointer select-none text-sm text-warm-gray hover:text-primary transition-colors">
+                        <input type="checkbox" id="bcc-toggle"
+                            class="w-4 h-4 text-primary rounded focus:ring-primary border-warm-border"
+                            onchange="toggleBCC()">
                         顯示密件副本 (BCC)
                     </label>
                 </div>
 
                 <div id="preview-container" class="grid gap-6">
                     <!-- 預覽卡片將生成於此 -->
-                    <div class="text-center py-10 bg-warm-bg border border-dashed border-warm-border rounded-lg text-warm-gray">
+                    <div
+                        class="text-center py-10 bg-warm-bg border border-dashed border-warm-border rounded-lg text-warm-gray">
                         請先輸入資料並確認模板
                     </div>
                 </div>
@@ -310,7 +413,7 @@
         // --- 初始狀態與變數 ---
         const defaultData = `姓名,Email,學校,課程名稱,課程連結
 王大明,ming@example.com,臺北科技大學,人工智慧導論,https://ntut.edu.tw/ai
-李小華,hua@example.com,成功大學,Python基礎,https://ncku.edu.tw/python
+李小華,"hua@example.com\nlee@gmail.com",成功大學,Python基礎,https://ncku.edu.tw/python
 張志明,chang@example.com,清華大學,資料結構,https://nthu.edu.tw/ds`;
 
         const defaultBody = `<div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">您好 <b>{姓名}</b> 老師：</span></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">感謝您在 {學校} 開設「<span style="color: blue;">{課程名稱}</span>」。</span></div><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">您的課程連結如下：</span></div><div><a href="{課程連結}" style="font-family: Calibri, sans-serif; font-size: 12pt;">{課程連結}</a></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">請確認內容是否無誤。</span></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">教務團隊 敬上</span></div>`;
@@ -318,17 +421,16 @@
         let state = {
             csvInput: defaultData,
             subjectTemplate: '關於 {學校} 的 {課程名稱} 開課通知',
-            // ccTemplate: '', // 移除固定副本狀態
-            parsedData: [], // 原始解析資料
-            displayData: [], // 實際顯示資料 (可能經過合併)
+            parsedData: [],
+            displayData: [],
             headers: [],
             bodyTemplate: defaultBody,
             grouping: { enabled: false, column: '' },
-            showBCC: false // BCC 顯示狀態
+            showBCC: false
         };
 
-        const STORAGE_KEY = 'email_generator_state_v4'; // 更新 key
-        let savedRange = null; 
+        const STORAGE_KEY = 'email_generator_state_v6'; // Version bump for new parser
+        let savedRange = null;
 
         // DOM 元素引用
         const els = {
@@ -337,13 +439,12 @@
             tablePreview: document.getElementById('table-preview-container'),
             variableButtons: document.getElementById('variable-buttons'),
             subjectInput: document.getElementById('subject-input'),
-            // ccInput: document.getElementById('cc-input'), // 移除 DOM 參照
             editor: document.getElementById('editor-content'),
             previewContainer: document.getElementById('preview-container'),
             groupEnable: document.getElementById('group-enable'),
             groupSettings: document.getElementById('group-settings'),
             groupColumn: document.getElementById('group-column'),
-            bccToggle: document.getElementById('bcc-toggle'), // BCC 開關
+            bccToggle: document.getElementById('bcc-toggle'),
             btns: {
                 data: document.getElementById('btn-tab-data'),
                 template: document.getElementById('btn-tab-template'),
@@ -358,23 +459,17 @@
 
         // --- 初始化 ---
         function init() {
-            // 1. 嘗試讀取本地儲存
             loadState();
-
-            // 2. 初始化 UI
             els.csvInput.value = state.csvInput;
             els.subjectInput.value = state.subjectTemplate;
             els.editor.innerHTML = state.bodyTemplate || defaultBody;
-            
-            // 設定合併 UI 狀態
+
             els.groupEnable.checked = state.grouping.enabled;
-            if(state.grouping.enabled) els.groupSettings.classList.remove('hidden');
-            
-            // 設定 BCC 開關
+            if (state.grouping.enabled) els.groupSettings.classList.remove('hidden');
+
             els.bccToggle.checked = state.showBCC;
             updateBCCVisibility();
 
-            // 3. 綁定事件 - 加入自動儲存
             els.csvInput.addEventListener('input', (e) => {
                 state.csvInput = e.target.value;
                 parseData();
@@ -386,24 +481,171 @@
                 saveState();
             });
 
-            // 編輯器內容變更時儲存
             els.editor.addEventListener('input', (e) => {
                 state.bodyTemplate = els.editor.innerHTML;
                 saveState();
             });
 
-            // 點擊外部關閉色盤
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.relative.inline-block')) {
                     closeAllMenus();
                 }
             });
 
-            parseData(); // 初次解析
+            parseData();
             lucide.createIcons();
         }
 
-        // --- BCC 顯示邏輯 ---
+        // --- Improved Robust CSV/TSV Parser ---
+        function parseCSVToObjects(text) {
+            if (!text || !text.trim()) return { headers: [], data: [] };
+
+            // 1. Smart Delimiter Detection
+            // Scan the first 5000 characters to determine if it's Tab or Comma separated
+            const chunk = text.substring(0, 5000);
+            const tabCount = (chunk.match(/\t/g) || []).length;
+            const commaCount = (chunk.match(/,/g) || []).length;
+            // Prefer tab if present (common for Excel copy-paste), otherwise comma
+            const delimiter = tabCount >= commaCount && tabCount > 0 ? '\t' : ',';
+
+            // 2. Tokenizer (State Machine)
+            const rows = [];
+            let currentRow = [];
+            let currentValue = '';
+            let insideQuote = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i + 1];
+
+                if (char === '"') {
+                    if (insideQuote && nextChar === '"') {
+                        // Double quote inside quotes -> single quote (Excel CSV standard)
+                        currentValue += '"';
+                        i++;
+                    } else {
+                        // Toggle quote state
+                        insideQuote = !insideQuote;
+                    }
+                } else if (char === delimiter && !insideQuote) {
+                    // Delimiter found (End of cell)
+                    currentRow.push(currentValue);
+                    currentValue = '';
+                } else if ((char === '\n' || char === '\r') && !insideQuote) {
+                    // Newline found (End of row)
+                    // Handle \r\n sequence
+                    if (char === '\r' && nextChar === '\n') i++;
+
+                    currentRow.push(currentValue);
+                    rows.push(currentRow);
+                    currentRow = [];
+                    currentValue = '';
+                } else {
+                    currentValue += char;
+                }
+            }
+            // Add the very last row if it exists
+            if (currentValue || currentRow.length > 0) {
+                currentRow.push(currentValue);
+                rows.push(currentRow);
+            }
+
+            // 3. Convert to Objects
+            if (rows.length === 0) return { headers: [], data: [] };
+
+            // Clean headers (trim whitespace)
+            const headers = rows[0].map(h => h.trim());
+            const data = rows.slice(1).map(row => {
+                const obj = {};
+                headers.forEach((h, index) => {
+                    // Assign value or empty string if missing
+                    let val = row[index] || '';
+                    obj[h] = val;
+                });
+                return obj;
+            });
+
+            return { headers, data };
+        }
+
+        // Helper: Clean Multi-value Emails (e.g. from single cell with newlines)
+        function cleanEmailField(value) {
+            if (!value) return '';
+            // Replace newlines, commas, spaces with semicolon
+            let cleaned = value.replace(/[\n\r, ]+/g, ';');
+            // Remove duplicate semicolons
+            cleaned = cleaned.replace(/;+/g, ';');
+            // Trim semicolons from start/end
+            cleaned = cleaned.replace(/^;+|;+$/g, '');
+            return cleaned;
+        }
+
+        // --- Main Data Parsing ---
+        function parseData() {
+            const result = parseCSVToObjects(state.csvInput);
+            state.headers = result.headers;
+
+            // Pre-process data to clean email fields immediately
+            state.parsedData = result.data.map(row => {
+                const newRow = { ...row };
+                Object.keys(newRow).forEach(key => {
+                    const kLower = key.toLowerCase();
+                    // Identify fields that might contain multiple emails
+                    if (['email', '收件人', '信箱', 'cc', 'bcc', '副本', '密件副本'].some(term => kLower.includes(term))) {
+                        newRow[key] = cleanEmailField(newRow[key]);
+                    }
+                });
+                return newRow;
+            });
+
+            state.displayData = [];
+            updateDataUI(); // Initial UI update
+
+            // Trigger grouping logic
+            updateGroupingUI();
+            applyGrouping();
+        }
+
+        function updateDataUI() {
+            els.dataCount.innerText = `共 ${state.displayData.length} 筆`;
+
+            if (state.displayData.length > 0) {
+                // Change: Sticky header for better UX when scrolling
+                let tableHTML = `<table class="min-w-full divide-y divide-gray-200"><thead class="bg-warm-bg sticky-header"><tr>`;
+                state.headers.forEach(h => {
+                    tableHTML += `<th class="px-3 py-2 text-left text-xs font-medium text-warm-gray uppercase whitespace-nowrap bg-warm-bg">${h}</th>`;
+                });
+                tableHTML += `</tr></thead><tbody class="bg-white divide-y divide-gray-200">`;
+
+                // Change: Render ALL rows, removed .slice(0, 3)
+                state.displayData.forEach(row => {
+                    tableHTML += `<tr>`;
+                    state.headers.forEach(h => {
+                        let cellContent = row[h] || '';
+                        // Still truncate visuals slightly for table compactness, but data is there
+                        if (cellContent.length > 30) cellContent = cellContent.substring(0, 30) + '...';
+                        tableHTML += `<td class="px-3 py-2 text-sm text-warm-black whitespace-nowrap" title="${row[h]}">${cellContent}</td>`;
+                    });
+                    tableHTML += `</tr>`;
+                });
+                tableHTML += `</tbody></table>`;
+                els.tablePreview.innerHTML = tableHTML;
+                els.tablePreview.classList.remove('hidden');
+            } else {
+                els.tablePreview.classList.add('hidden');
+            }
+
+            els.variableButtons.innerHTML = '';
+            state.headers.forEach(h => {
+                const btn = document.createElement('button');
+                btn.className = "px-2 py-1 bg-warm-bg hover:bg-white hover:text-primary border border-warm-border rounded text-xs text-warm-gray transition-colors";
+                btn.innerText = `{${h}}`;
+                btn.onmousedown = (e) => insertVariable(e, `{${h}}`);
+                els.variableButtons.appendChild(btn);
+            });
+        }
+
+        // --- Other Functions (Same as before) ---
         function toggleBCC() {
             state.showBCC = els.bccToggle.checked;
             updateBCCVisibility();
@@ -419,10 +661,8 @@
             }
         }
 
-        // --- 儲存與讀取狀態 ---
         function saveState() {
             try {
-                // 儲存需要的欄位
                 const dataToSave = {
                     csvInput: state.csvInput,
                     subjectTemplate: state.subjectTemplate,
@@ -431,9 +671,7 @@
                     showBCC: state.showBCC
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-            } catch (e) {
-                console.error("儲存失敗", e);
-            }
+            } catch (e) { console.error(e); }
         }
 
         function loadState() {
@@ -444,17 +682,12 @@
                     state.csvInput = parsed.csvInput !== undefined ? parsed.csvInput : defaultData;
                     state.subjectTemplate = parsed.subjectTemplate !== undefined ? parsed.subjectTemplate : '關於 {學校} 的 {課程名稱} 開課通知';
                     state.bodyTemplate = parsed.bodyTemplate !== undefined ? parsed.bodyTemplate : defaultBody;
-                    // 讀取合併設定
                     if (parsed.grouping) state.grouping = parsed.grouping;
-                    // 讀取 BCC 設定
                     if (parsed.showBCC !== undefined) state.showBCC = parsed.showBCC;
                 }
-            } catch (e) {
-                console.error("讀取失敗，使用預設值", e);
-            }
+            } catch (e) { console.error(e); }
         }
 
-        // --- 清除功能 ---
         function clearData() {
             if (confirm("確定要清空所有資料嗎？此動作無法復原。")) {
                 state.csvInput = "";
@@ -465,18 +698,15 @@
         }
 
         function clearTemplate() {
-            if (confirm("確定要清空主旨與內文模板嗎？此動作無法復原。")) {
+            if (confirm("確定要清空主旨與內文模板嗎？")) {
                 state.subjectTemplate = "";
                 state.bodyTemplate = "";
-                
                 els.subjectInput.value = "";
                 els.editor.innerHTML = "";
-                
                 saveState();
             }
         }
 
-        // --- 合併寄信邏輯 ---
         function toggleGrouping() {
             state.grouping.enabled = els.groupEnable.checked;
             if (state.grouping.enabled) {
@@ -484,7 +714,6 @@
             } else {
                 els.groupSettings.classList.add('hidden');
             }
-            // 重設欄位選擇 (如果之前沒選或被清空)
             if (state.grouping.enabled && !state.grouping.column && state.headers.length > 0) {
                 state.grouping.column = state.headers[0];
             }
@@ -500,83 +729,206 @@
         }
 
         function updateGroupingUI() {
-            // 更新下拉選單
             els.groupColumn.innerHTML = '';
             state.headers.forEach(h => {
                 const option = document.createElement('option');
                 option.value = h;
                 option.text = h;
-                if (h === state.grouping.column) {
-                    option.selected = true;
-                }
+                if (h === state.grouping.column) option.selected = true;
                 els.groupColumn.appendChild(option);
             });
         }
 
         function applyGrouping() {
             if (!state.grouping.enabled || !state.grouping.column || state.parsedData.length === 0) {
-                // 不合併：顯示原始資料
                 state.displayData = [...state.parsedData];
             } else {
-                // 執行合併
                 const groupMap = new Map();
                 const targetCol = state.grouping.column;
 
                 state.parsedData.forEach(row => {
                     const key = row[targetCol] || '(未分類)';
-                    
                     if (!groupMap.has(key)) {
-                        // 初始化群組
                         const initialObj = {};
-                        state.headers.forEach(h => {
-                            initialObj[h] = [row[h]];
-                        });
+                        state.headers.forEach(h => { initialObj[h] = [row[h]]; });
                         groupMap.set(key, initialObj);
                     } else {
-                        // 加入現有群組
                         const existingObj = groupMap.get(key);
-                        state.headers.forEach(h => {
-                            // 排除空值
-                            if(row[h]) existingObj[h].push(row[h]);
-                        });
+                        state.headers.forEach(h => { if (row[h]) existingObj[h].push(row[h]); });
                     }
                 });
 
-                // 將群組轉回顯示用的物件陣列
                 state.displayData = Array.from(groupMap.values()).map(groupObj => {
                     const finalRow = {};
                     state.headers.forEach(h => {
                         const values = groupObj[h];
-                        // 去除重複值 (Set)
-                        const uniqueValues = [...new Set(values)];
-                        
-                        // 判定特殊欄位 (不分大小寫)
+                        // Merge values
+                        let allValues = [];
+                        values.forEach(v => {
+                            if (!v) return;
+                            v.split(';').forEach(subV => {
+                                const trimV = subV.trim();
+                                if (trimV) allValues.push(trimV);
+                            });
+                        });
+
+                        const uniqueValues = [...new Set(allValues)];
+
                         const hLower = h.toLowerCase();
                         const isRecipient = hLower === 'email' || h === '收件人' || h === '信箱';
-                        const isCC = hLower === 'cc' || h === '副本';
-                        const isBCC = hLower === 'bcc' || h === '密件副本';
-                        
-                        if (isRecipient || isCC || isBCC) {
-                            // Email / 副本 / BCC 用分號串接 (Outlook 格式)
+                        const isCC = hLower.includes('cc') || h.includes('副本');
+                        const isBCC = hLower.includes('bcc') || h.includes('密件');
+
+                        if (isRecipient || (isCC && !hLower.includes('bcc') && !h.includes('密件')) || isBCC) {
                             finalRow[h] = uniqueValues.join('; ');
                         } else if (h === targetCol) {
-                            // 分組依據欄位保持單一值
-                            finalRow[h] = uniqueValues[0];
+                            finalRow[h] = uniqueValues.length > 0 ? uniqueValues[0] : '';
                         } else {
-                            // 其他欄位用頓號串接 (適合中文語境)
-                            finalRow[h] = uniqueValues.join('、');
+                            const simpleUnique = [...new Set(values)];
+                            finalRow[h] = simpleUnique.join('、');
                         }
                     });
                     return finalRow;
                 });
             }
-            updateDataUI(); // 更新預覽計數
+            updateDataUI();
         }
 
+        function handleToolbar(e, command) {
+            e.preventDefault();
+            els.editor.focus();
+            if (command === 'createLink') {
+                const url = prompt("請輸入網址 (可輸入 {變數} )：", "https://");
+                if (url) document.execCommand(command, false, url);
+            } else if (command === 'unlink') {
+                document.execCommand('unlink', false, null);
+            } else {
+                document.execCommand(command, false, null);
+            }
+        }
 
-        // --- 核心邏輯 ---
+        function saveSelection() {
+            const sel = window.getSelection();
+            if (sel.rangeCount > 0) savedRange = sel.getRangeAt(0);
+        }
+        function restoreSelection() {
+            if (savedRange) {
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(savedRange);
+            }
+        }
+        function closeAllMenus() {
+            document.querySelectorAll('.color-menu').forEach(menu => menu.classList.remove('open'));
+        }
+        function toggleColorMenu(e, menuId) {
+            e.preventDefault(); e.stopPropagation();
+            saveSelection();
+            const menu = document.getElementById(menuId);
+            const isOpen = menu.classList.contains('open');
+            closeAllMenus();
+            if (!isOpen) menu.classList.add('open');
+        }
+        function applyColor(e, command, value) {
+            e.preventDefault(); e.stopPropagation();
+            restoreSelection();
+            els.editor.focus();
+            document.execCommand(command, false, value);
+            state.bodyTemplate = els.editor.innerHTML;
+            saveState();
+            closeAllMenus();
+        }
+        function insertVariable(e, variable) {
+            e.preventDefault(); els.editor.focus();
+            document.execCommand('insertText', false, variable);
+            state.bodyTemplate = els.editor.innerHTML;
+            saveState();
+        }
 
-        // 1. 切換分頁
+        function renderPreview() {
+            const bodyTemplate = els.editor.innerHTML;
+            if (state.displayData.length === 0) {
+                els.previewContainer.innerHTML = '<div class="text-center py-10 bg-warm-bg border border-dashed border-warm-border rounded-lg text-warm-gray">沒有資料，請先至「匯入資料」頁籤貼上資料。</div>';
+                return;
+            }
+            els.previewContainer.innerHTML = '';
+
+            state.displayData.forEach((row, index) => {
+                const finalSubject = replaceVariables(state.subjectTemplate, row);
+
+                let dynamicCC = '';
+                let dynamicBCC = '';
+                let recipientEmail = '';
+
+                Object.keys(row).forEach(k => {
+                    const kLower = k.toLowerCase();
+                    if (['email', '收件人', '信箱'].includes(kLower)) recipientEmail = row[k];
+                    if ((kLower.includes('cc') || k.includes('副本')) && !kLower.includes('bcc') && !k.includes('密件')) dynamicCC = row[k];
+                    if (kLower.includes('bcc') || k.includes('密件')) dynamicBCC = row[k];
+                });
+
+                const finalBodyHtml = replaceVariables(bodyTemplate, row);
+
+                const card = document.createElement('div');
+                card.className = "bg-white border border-warm-border rounded-lg shadow-sm mb-6";
+                card.innerHTML = `
+                    <div class="bg-warm-bg px-4 py-2 border-b border-warm-border flex justify-between items-center">
+                        <span class="font-bold text-warm-black">#${index + 1}</span>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <div class="flex items-start gap-3">
+                            <span class="text-sm font-bold text-warm-gray w-14 pt-1.5 text-right">收件人</span>
+                            <div class="flex-1 flex gap-2">
+                                <div class="flex-1 p-2 bg-warm-bg rounded border border-warm-border text-sm font-mono text-primary break-all">
+                                    ${recipientEmail || '<span class="text-gray-400">未填寫</span>'}
+                                </div>
+                                <button onclick="copySimpleText(this, '${recipientEmail}')" class="p-2 text-warm-gray hover:text-primary hover:bg-info-bg rounded border border-warm-border transition-colors" title="複製收件人"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <span class="text-sm font-bold text-warm-gray w-14 pt-1.5 text-right">副本</span>
+                            <div class="flex-1 flex gap-2">
+                                <div class="flex-1 p-2 bg-warm-bg rounded border border-warm-border text-sm font-mono text-warm-gray break-all">
+                                    ${dynamicCC || '<span class="text-gray-400">無</span>'}
+                                </div>
+                                <button onclick="copySimpleText(this, '${dynamicCC}')" class="p-2 text-warm-gray hover:text-primary hover:bg-info-bg rounded border border-warm-border transition-colors" title="複製副本"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+                        <div class="items-start gap-3 bcc-row">
+                            <span class="text-sm font-bold text-warm-gray w-14 pt-1.5 text-right">密件副本</span>
+                            <div class="flex-1 flex gap-2">
+                                <div class="flex-1 p-2 bg-warm-bg rounded border border-warm-border text-sm font-mono text-warm-gray break-all">
+                                    ${dynamicBCC || '<span class="text-gray-400">無</span>'}
+                                </div>
+                                <button onclick="copySimpleText(this, '${dynamicBCC}')" class="p-2 text-warm-gray hover:text-primary hover:bg-info-bg rounded border border-warm-border transition-colors" title="複製密件副本"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <span class="text-sm font-bold text-warm-gray w-14 pt-1.5 text-right">主旨</span>
+                            <div class="flex-1 flex gap-2">
+                                <div class="flex-1 p-2 bg-warm-bg rounded border border-warm-border text-sm font-medium text-warm-black">
+                                    ${finalSubject}
+                                </div>
+                                <button onclick="copySimpleText(this, '${finalSubject}')" class="p-2 text-warm-gray hover:text-primary hover:bg-info-bg rounded border border-warm-border transition-colors" title="複製主旨"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-warm-border">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold text-warm-gray uppercase">內文預覽</span>
+                                <button onclick="copyToClipboard(this, ${index})" data-content="${encodeURIComponent(finalBodyHtml)}" class="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded text-sm hover:bg-primary-hover transition-colors shadow-sm font-bold">
+                                    <i data-lucide="copy" class="h-4 w-4"></i> 複製內文 (含格式)
+                                </button>
+                            </div>
+                            <div class="p-4 bg-white border border-warm-border rounded text-sm text-warm-black leading-relaxed max-w-none email-content" style="font-family: Calibri, sans-serif; font-size: 12pt;">${finalBodyHtml}</div>
+                        </div>
+                    </div>
+                `;
+                els.previewContainer.appendChild(card);
+            });
+            updateBCCVisibility();
+            lucide.createIcons();
+        }
+
         function switchTab(tabName) {
             Object.keys(els.btns).forEach(key => {
                 const btn = els.btns[key];
@@ -601,446 +953,105 @@
             }
         }
 
-        // 2. 解析 CSV
-        function parseData() {
-            const input = state.csvInput.trim();
-            if (!input) {
-                state.parsedData = [];
-                state.headers = [];
-                state.displayData = []; // 清空顯示資料
-                updateDataUI();
-                return;
-            }
-
-            const rows = input.split('\n');
-            if (rows.length === 0) return;
-
-            const separator = rows[0].includes('\t') ? '\t' : ',';
-            const headerRow = rows[0].split(separator).map(h => h.trim());
-            
-            state.headers = headerRow;
-            state.parsedData = rows.slice(1).map(row => {
-                const values = row.split(separator).map(v => v.trim());
-                const obj = {};
-                headerRow.forEach((header, index) => {
-                    obj[header] = values[index] || '';
-                });
-                return obj;
-            });
-
-            // 資料解析後，更新合併選項並執行合併
-            updateGroupingUI();
-            applyGrouping();
-        }
-
-        // 3. 更新資料介面
-        function updateDataUI() {
-            // 顯示的是「合併後」的筆數
-            els.dataCount.innerText = `共 ${state.displayData.length} 筆`; // 改用 displayData
-            
-            if (state.displayData.length > 0) {
-                let tableHTML = `<table class="min-w-full divide-y divide-gray-200"><thead class="bg-warm-bg"><tr>`;
-                state.headers.forEach(h => {
-                    tableHTML += `<th class="px-3 py-2 text-left text-xs font-medium text-warm-gray uppercase whitespace-nowrap">${h}</th>`;
-                });
-                tableHTML += `</tr></thead><tbody class="bg-white divide-y divide-gray-200">`;
-                // 預覽前 3 筆 (使用合併後的資料)
-                state.displayData.slice(0, 3).forEach(row => {
-                    tableHTML += `<tr>`;
-                    state.headers.forEach(h => {
-                        // 截斷過長的內容以免表格跑版
-                        let cellContent = row[h] || '';
-                        if (cellContent.length > 20) cellContent = cellContent.substring(0, 20) + '...';
-                        tableHTML += `<td class="px-3 py-2 text-sm text-warm-black whitespace-nowrap" title="${row[h]}">${cellContent}</td>`;
-                    });
-                    tableHTML += `</tr>`;
-                });
-                tableHTML += `</tbody></table>`;
-                els.tablePreview.innerHTML = tableHTML;
-                els.tablePreview.classList.remove('hidden');
-            } else {
-                els.tablePreview.classList.add('hidden');
-            }
-            
-            // 更新變數按鈕
-            els.variableButtons.innerHTML = '';
-            state.headers.forEach(h => {
-                const btn = document.createElement('button');
-                btn.className = "px-2 py-1 bg-warm-bg hover:bg-white hover:text-primary border border-warm-border rounded text-xs text-warm-gray transition-colors";
-                btn.innerText = `{${h}}`;
-                btn.onmousedown = (e) => insertVariable(e, `{${h}}`);
-                els.variableButtons.appendChild(btn);
-            });
-        }
-
-        // 4. 編輯器工具列功能
-        function handleToolbar(e, command) {
-            e.preventDefault();
-            els.editor.focus();
-            if (command === 'createLink') {
-                const url = prompt("請輸入網址 (可輸入 {變數} )：", "https://");
-                if (url) {
-                    document.execCommand(command, false, url);
-                }
-            } else if (command === 'unlink') {
-                document.execCommand('unlink', false, null);
-            } else {
-                document.execCommand(command, false, null);
-            }
-        }
-
-        // 4.1 顏色選單邏輯
-        function saveSelection() {
-            const sel = window.getSelection();
-            if (sel.rangeCount > 0) {
-                savedRange = sel.getRangeAt(0);
-            }
-        }
-
-        function restoreSelection() {
-            if (savedRange) {
-                const sel = window.getSelection();
-                sel.removeAllRanges();
-                sel.addRange(savedRange);
-            }
-        }
-
-        function closeAllMenus() {
-            document.querySelectorAll('.color-menu').forEach(menu => {
-                menu.classList.remove('open');
-            });
-        }
-
-        function toggleColorMenu(e, menuId) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // 先儲存編輯器的選取狀態
-            saveSelection();
-
-            const menu = document.getElementById(menuId);
-            const isOpen = menu.classList.contains('open');
-            
-            closeAllMenus(); // 關閉其他
-            
-            if (!isOpen) {
-                menu.classList.add('open');
-            }
-        }
-
-        function applyColor(e, command, value) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // 還原選取狀態
-            restoreSelection();
-            els.editor.focus();
-            
-            document.execCommand(command, false, value);
-            // 執行後同步更新狀態，確保顏色被記憶
-            state.bodyTemplate = els.editor.innerHTML;
-            saveState();
-            closeAllMenus();
-        }
-
-        // 5. 插入變數
-        function insertVariable(e, variable) {
-            e.preventDefault();
-            els.editor.focus();
-            document.execCommand('insertText', false, variable);
-            // 更新狀態
-            state.bodyTemplate = els.editor.innerHTML;
-            saveState();
-        }
-
-        // 6. 渲染預覽
-        function renderPreview() {
-            const bodyTemplate = els.editor.innerHTML;
-            // 使用 displayData 進行渲染
-            if (state.displayData.length === 0) {
-                els.previewContainer.innerHTML = '<div class="text-center py-10 bg-warm-bg border border-dashed border-warm-border rounded-lg text-warm-gray">沒有資料，請先至「匯入資料」頁籤貼上資料。</div>';
-                return;
-            }
-            els.previewContainer.innerHTML = '';
-            
-            state.displayData.forEach((row, index) => {
-                const finalSubject = replaceVariables(state.subjectTemplate, row);
-                
-                // --- 自動抓取欄位邏輯 (優先權高) ---
-                let dynamicCC = '';
-                let dynamicBCC = '';
-                let recipientEmail = '';
-
-                // 遍歷所有 Key 尋找對應欄位
-                Object.keys(row).forEach(k => {
-                    const kLower = k.toLowerCase();
-                    // 收件人
-                    if (['email', '收件人', '信箱'].includes(kLower)) {
-                        recipientEmail = row[k];
-                    }
-                    // 副本
-                    if (kLower.includes('cc') || k.includes('副本')) {
-                        // 排除 "密件副本" (BCC)
-                        if (!kLower.includes('bcc') && !k.includes('密件')) {
-                            dynamicCC = row[k];
-                        }
-                    }
-                    // 密件副本
-                    if (kLower.includes('bcc') || k.includes('密件')) {
-                        dynamicBCC = row[k];
-                    }
-                });
-
-                const finalCC = dynamicCC;
-                const finalBCC = dynamicBCC;
-                
-                const finalBodyHtml = replaceVariables(bodyTemplate, row);
-
-                const card = document.createElement('div');
-                card.className = "bg-white border border-warm-border rounded-lg shadow-sm mb-6";
-                card.innerHTML = `
-                    <div class="bg-warm-bg px-4 py-2 border-b border-warm-border flex justify-between items-center">
-                        <span class="font-bold text-warm-black">#${index + 1}</span>
-                    </div>
-                    <div class="p-4 space-y-3">
-                        <!-- 收件人 -->
-                        <div class="flex items-start gap-3">
-                            <span class="text-sm font-bold text-warm-gray w-14 pt-1.5 text-right">收件人</span>
-                            <div class="flex-1 flex gap-2">
-                                <div class="flex-1 p-2 bg-warm-bg rounded border border-warm-border text-sm font-mono text-primary break-all">
-                                    ${recipientEmail || '<span class="text-gray-400">未填寫</span>'}
-                                </div>
-                                <button onclick="copySimpleText(this, '${recipientEmail}')" class="p-2 text-warm-gray hover:text-primary hover:bg-info-bg rounded border border-warm-border transition-colors" title="複製收件人">
-                                    <i data-lucide="copy" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- 副本 -->
-                        <div class="flex items-start gap-3">
-                            <span class="text-sm font-bold text-warm-gray w-14 pt-1.5 text-right">副本</span>
-                            <div class="flex-1 flex gap-2">
-                                <div class="flex-1 p-2 bg-warm-bg rounded border border-warm-border text-sm font-mono text-warm-gray break-all">
-                                    ${finalCC || '<span class="text-gray-400">無</span>'}
-                                </div>
-                                <button onclick="copySimpleText(this, '${finalCC}')" class="p-2 text-warm-gray hover:text-primary hover:bg-info-bg rounded border border-warm-border transition-colors" title="複製副本" ${!finalCC ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
-                                    <i data-lucide="copy" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- 密件副本 (隱藏/顯示) -->
-                        <div class="items-start gap-3 bcc-row">
-                            <span class="text-sm font-bold text-warm-gray w-14 pt-1.5 text-right">密件副本</span>
-                            <div class="flex-1 flex gap-2">
-                                <div class="flex-1 p-2 bg-warm-bg rounded border border-warm-border text-sm font-mono text-warm-gray break-all">
-                                    ${finalBCC || '<span class="text-gray-400">無</span>'}
-                                </div>
-                                <button onclick="copySimpleText(this, '${finalBCC}')" class="p-2 text-warm-gray hover:text-primary hover:bg-info-bg rounded border border-warm-border transition-colors" title="複製密件副本" ${!finalBCC ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
-                                    <i data-lucide="copy" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- 主旨 -->
-                        <div class="flex items-start gap-3">
-                            <span class="text-sm font-bold text-warm-gray w-14 pt-1.5 text-right">主旨</span>
-                            <div class="flex-1 flex gap-2">
-                                <div class="flex-1 p-2 bg-warm-bg rounded border border-warm-border text-sm font-medium text-warm-black">
-                                    ${finalSubject}
-                                </div>
-                                <button onclick="copySimpleText(this, '${finalSubject}')" class="p-2 text-warm-gray hover:text-primary hover:bg-info-bg rounded border border-warm-border transition-colors" title="複製主旨">
-                                    <i data-lucide="copy" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- 內文預覽 -->
-                        <div class="mt-4 pt-4 border-t border-warm-border">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-xs font-bold text-warm-gray uppercase">內文預覽</span>
-                                <button onclick="copyToClipboard(this, ${index})" data-content="${encodeURIComponent(finalBodyHtml)}" class="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded text-sm hover:bg-primary-hover transition-colors shadow-sm font-bold">
-                                    <i data-lucide="copy" class="h-4 w-4"></i> 複製內文 (含格式)
-                                </button>
-                            </div>
-                            <div class="p-4 bg-white border border-warm-border rounded text-sm text-warm-black leading-relaxed max-w-none email-content"
-                                 style="font-family: Calibri, sans-serif; font-size: 12pt;">
-                                ${finalBodyHtml}
-                            </div>
-                        </div>
-                    </div>
-                `;
-                els.previewContainer.appendChild(card);
-            });
-            updateBCCVisibility(); // 確保 BCC 狀態正確
-            lucide.createIcons();
-        }
-
         function replaceVariables(template, rowData) {
             let result = template;
             state.headers.forEach(header => {
                 const value = rowData[header] || '';
-                
-                // 1. Replace standard {Header}
                 result = result.split(`{${header}}`).join(value);
-                
-                // 2. Replace encoded %7BHeader%7D (for href attributes)
-                // Note: encodeURIComponent('{') is %7B, '}' is %7D.
                 const encodedKey = `%7B${header}%7D`;
                 result = result.split(encodedKey).join(value);
             });
             return result;
         }
-
         function stripHtml(html) {
             const temp = document.createElement('div');
             temp.innerHTML = html;
             return temp.innerText || temp.textContent || '';
         }
-
-        // RGB 轉 Hex 的字串替換函式
         function convertRgbToHexInHtml(html) {
             return html.replace(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/gi, (match, r, g, b) => {
-                const toHex = (n) => {
-                    const hex = parseInt(n).toString(16);
-                    return hex.length === 1 ? '0' + hex : hex;
-                };
+                const toHex = (n) => { const hex = parseInt(n).toString(16); return hex.length === 1 ? '0' + hex : hex; };
                 return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
             });
         }
-
-        // 複製純文字功能 (收件人、副本、主旨)
         function copySimpleText(btn, text) {
             if (!text) return;
-            
             const textarea = document.createElement('textarea');
             textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
+            textarea.style.position = 'fixed'; textarea.style.opacity = '0';
             document.body.appendChild(textarea);
             textarea.select();
-            
             try {
                 document.execCommand('copy');
-                
-                // Visual feedback
                 const originalIcon = btn.innerHTML;
                 btn.innerHTML = `<i data-lucide="check" class="w-4 h-4 text-green-600"></i>`;
                 lucide.createIcons();
-                
-                setTimeout(() => {
-                    btn.innerHTML = originalIcon;
-                    lucide.createIcons();
-                }, 1500);
-                
-            } catch (err) {
-                console.error('Copy failed', err);
-                alert('複製失敗');
-            } finally {
-                document.body.removeChild(textarea);
-            }
+                setTimeout(() => { btn.innerHTML = originalIcon; lucide.createIcons(); }, 1500);
+            } catch (err) { alert('複製失敗'); } finally { document.body.removeChild(textarea); }
         }
-
-        // 9. 複製到剪貼簿 (Outlook 專用邏輯 - 使用 clipboardData 攔截)
         function copyToClipboard(btn, index) {
             const rawHtml = decodeURIComponent(btn.getAttribute('data-content'));
-            
-            // 創建 DOM 處理元素
             const processor = document.createElement('div');
             processor.innerHTML = rawHtml;
-
             const fontFamily = "'Calibri', sans-serif";
             const fontSize = "12pt";
             const color = "#000000";
 
-            // 遍歷元素做基本正規化 (但不過度強制黑色)
             const allElements = processor.querySelectorAll('*');
             allElements.forEach(el => {
                 el.removeAttribute('class');
-
                 if (!el.style.fontFamily) el.style.fontFamily = fontFamily;
                 if (!el.style.fontSize) el.style.fontSize = fontSize;
-                
-                // 只有在最外層或沒有顏色時才設定黑色，避免覆蓋子元素顏色
-                if (!el.style.color && el.tagName !== 'A' && !['B', 'STRONG', 'I', 'EM', 'SPAN'].includes(el.tagName)) {
-                    // el.style.color = color; // 暫時移除強制黑色，依靠最外層繼承
-                }
-
-                if (['B', 'STRONG'].includes(el.tagName) || el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight) >= 700) {
-                     el.style.fontWeight = 'bold';
-                }
-
-                if (['I', 'EM'].includes(el.tagName) || el.style.fontStyle === 'italic') {
-                     el.style.fontStyle = 'italic';
-                }
-
-                if (['U'].includes(el.tagName) || el.style.textDecoration.includes('underline')) {
-                     el.style.textDecoration = 'underline';
-                }
-
-                if (['UL', 'OL'].includes(el.tagName)) {
-                    el.style.marginLeft = '24px';
-                    el.style.paddingLeft = '0';
-                }
-                
-                if (el.tagName === 'LI') {
-                   el.style.fontFamily = fontFamily;
-                   el.style.fontSize = fontSize;
-                   el.style.marginBottom = '4px';
-                }
-
-                if (el.tagName === 'A') {
-                    el.style.color = 'blue';
-                    el.style.textDecoration = 'underline';
-                }
+                if (['B', 'STRONG'].includes(el.tagName)) el.style.fontWeight = 'bold';
+                if (['I', 'EM'].includes(el.tagName)) el.style.fontStyle = 'italic';
+                if (['U'].includes(el.tagName)) el.style.textDecoration = 'underline';
+                if (['UL', 'OL'].includes(el.tagName)) { el.style.marginLeft = '24px'; el.style.paddingLeft = '0'; }
+                if (el.tagName === 'LI') { el.style.fontFamily = fontFamily; el.style.fontSize = fontSize; el.style.marginBottom = '4px'; }
+                if (el.tagName === 'A') { el.style.color = 'blue'; el.style.textDecoration = 'underline'; }
             });
 
-            // 處理 RGB 轉 Hex
             let processedHtml = processor.innerHTML;
             processedHtml = convertRgbToHexInHtml(processedHtml);
-
-            // 建立最終 HTML 字串
-            const finalHtml = `
-                <div style="font-family: ${fontFamily}; font-size: ${fontSize}; color: ${color};">
-                    ${processedHtml}
-                </div>
-            `;
+            const finalHtml = `<div style="font-family: ${fontFamily}; font-size: ${fontSize}; color: ${color};">${processedHtml}</div>`;
             const plainText = processor.innerText || processor.textContent;
 
-            // --- 核心修改：攔截 copy 事件 ---
-            // 這是唯一能確保傳送純淨 Hex HTML 給 Outlook 的方法，繞過瀏覽器重組 DOM 的行為
             const listener = (e) => {
                 e.preventDefault();
                 e.clipboardData.setData('text/html', finalHtml);
                 e.clipboardData.setData('text/plain', plainText);
             };
-
             document.addEventListener('copy', listener);
-            
             try {
                 const successful = document.execCommand('copy');
-                document.removeEventListener('copy', listener); // 立即移除監聽器
-
+                document.removeEventListener('copy', listener);
                 if (successful) {
                     const originalHtml = btn.innerHTML;
                     btn.innerHTML = `<i data-lucide="check" class="h-4 w-4"></i> 已複製`;
                     lucide.createIcons();
-                    setTimeout(() => {
-                        btn.innerHTML = originalHtml;
-                        lucide.createIcons();
-                    }, 2000);
-                } else {
-                    alert("複製失敗");
-                }
+                    setTimeout(() => { btn.innerHTML = originalHtml; lucide.createIcons(); }, 2000);
+                } else { alert("複製失敗"); }
             } catch (err) {
                 document.removeEventListener('copy', listener);
-                console.error('Copy failed', err);
                 alert("瀏覽器不支援，請手動複製");
             }
         }
 
-        // 啟動
+        // Expose functions to global scope for HTML inline events
+        window.switchTab = switchTab;
+        window.clearData = clearData;
+        window.clearTemplate = clearTemplate;
+        window.toggleGrouping = toggleGrouping;
+        window.updateGroupingColumn = updateGroupingColumn;
+        window.toggleBCC = toggleBCC;
+        window.handleToolbar = handleToolbar;
+        window.toggleColorMenu = toggleColorMenu;
+        window.applyColor = applyColor;
+        window.insertVariable = insertVariable; // Ensure this is also exposed
+        window.copyToClipboard = copyToClipboard;
+        window.copySimpleText = copySimpleText;
+
         init();
     </script>
 </body>
+
 </html>
