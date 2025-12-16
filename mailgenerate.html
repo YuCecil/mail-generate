@@ -250,6 +250,12 @@
                         <div id="variable-buttons" class="flex flex-wrap gap-1 justify-end">
                             <!-- 變數按鈕將生成於此 -->
                         </div>
+                        <p class="text-xs text-warm-gray mt-1 flex flex-col items-end gap-1">
+                            <span class="flex items-center gap-1"><i data-lucide="info" class="w-3 h-3"></i>
+                                <code>:姓</code> 取第一個字 (例: <code>{姓名:姓}</code>)</span>
+                            <span class="flex items-center gap-1"><i data-lucide="info" class="w-3 h-3"></i>
+                                <code>:前</code> 取 @ 前內容 (例: <code>{Email:前}</code>)</span>
+                        </p>
                     </div>
                 </div>
 
@@ -416,7 +422,7 @@
 李小華,"hua@example.com\nlee@gmail.com",成功大學,Python基礎,https://ncku.edu.tw/python
 張志明,chang@example.com,清華大學,資料結構,https://nthu.edu.tw/ds`;
 
-        const defaultBody = `<div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">您好 <b>{姓名}</b> 老師：</span></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">感謝您在 {學校} 開設「<span style="color: blue;">{課程名稱}</span>」。</span></div><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">您的課程連結如下：</span></div><div><a href="{課程連結}" style="font-family: Calibri, sans-serif; font-size: 12pt;">{課程連結}</a></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">請確認內容是否無誤。</span></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">教務團隊 敬上</span></div>`;
+        const defaultBody = `<div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">您好 <b>{姓名:姓}</b> 老師：</span></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">感謝您在 {學校} 開設「<span style="color: blue;">{課程名稱}</span>」。</span></div><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">您的課程連結如下：</span></div><div><a href="{課程連結}" style="font-family: Calibri, sans-serif; font-size: 12pt;">{課程連結}</a></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">請確認內容是否無誤。</span></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">教務團隊 敬上</span></div>`;
 
         let state = {
             csvInput: defaultData,
@@ -429,7 +435,7 @@
             showBCC: false
         };
 
-        const STORAGE_KEY = 'email_generator_state_v6'; // Version bump for new parser
+        const STORAGE_KEY = 'email_generator_state_v7'; // Version bump for surname feature
         let savedRange = null;
 
         // DOM 元素引用
@@ -957,7 +963,26 @@
             let result = template;
             state.headers.forEach(header => {
                 const value = rowData[header] || '';
+
+                // 1. Standard replacement {Header}
                 result = result.split(`{${header}}`).join(value);
+
+                // 2. Surname replacement {Header:姓}
+                if (value.length > 0) {
+                    const surname = value.charAt(0);
+                    result = result.split(`{${header}:姓}`).join(surname);
+                } else {
+                    result = result.split(`{${header}:姓}`).join('');
+                }
+
+                // 3. Prefix before @ replacement {Header:前}
+                let prefix = value;
+                if (value.includes('@')) {
+                    prefix = value.split('@')[0];
+                }
+                result = result.split(`{${header}:前}`).join(prefix);
+
+                // 4. URL encoded replacement
                 const encodedKey = `%7B${header}%7D`;
                 result = result.split(encodedKey).join(value);
             });
