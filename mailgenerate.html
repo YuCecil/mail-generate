@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>信件生成器</title>
+    <title>信件生成器 (智慧連結版)</title>
     <!-- 引入 Tailwind CSS 進行樣式設定 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 設定自訂主題色票 -->
@@ -26,6 +26,15 @@
                     },
                     boxShadow: {
                         'soft': '0 4px 6px -1px rgba(168, 123, 0, 0.1), 0 2px 4px -1px rgba(168, 123, 0, 0.06)',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.2s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'scale(0.95)' },
+                            '100%': { opacity: '1', transform: 'scale(1)' },
+                        }
                     }
                 }
             }
@@ -138,8 +147,9 @@
         <div class="bg-primary p-6 text-white flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl font-bold flex items-center gap-2">
-                    <i data-lucide="mail" class="h-6 w-6"></i> 信件生成器
+                    <i data-lucide="mail" class="h-6 w-6"></i> 信件生成器 v2.2
                 </h1>
+                <p class="text-xs text-white/80 mt-1 ml-8">支援智慧連結移除 & 變數點擊插入</p>
             </div>
             <div class="flex gap-2 w-full sm:w-auto overflow-x-auto">
                 <button onclick="switchTab('data')" id="btn-tab-data"
@@ -187,7 +197,8 @@
                         <li>請直接從 Excel/Google Sheets 複製表格內容並貼在下方。</li>
                         <li><strong>支援多行資料：</strong>若同一格有多個 Email (換行分隔)，系統會自動辨識並處理。</li>
                         <li>第一列必須是「標題」（例如：姓名、Email、CC），這些將成為變數。</li>
-                        <li><strong>動態超連結：</strong>若要讓每封信的連結不同，請在「插入超連結」時，網址欄位輸入變數，例如 <code>{課程網址}</code>。</li>
+                        <li><strong>動態超連結：</strong>若要讓每封信的連結不同，請在「插入超連結」時，點擊下方的變數按鈕，例如 <code>{課程連結}</code>。</li>
+                        <li class="font-bold">若資料中的連結是空的，系統會自動將該連結轉換為純文字。</li>
                         <li
                             class="text-primary bg-white border border-info-border py-1 px-2 rounded -ml-2 my-1 inline-block font-semibold shadow-sm">
                             自動抓取關鍵字：
@@ -372,7 +383,7 @@
 
                             <button onmousedown="handleToolbar(event, 'createLink')"
                                 class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors"
-                                title="插入超連結"><i data-lucide="link" class="w-4 h-4"></i></button>
+                                title="插入超連結 (支援變數)"><i data-lucide="link" class="w-4 h-4"></i></button>
                             <button onmousedown="handleToolbar(event, 'unlink')"
                                 class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors"
                                 title="移除超連結"><i data-lucide="link-2-off" class="w-4 h-4"></i></button>
@@ -414,15 +425,46 @@
         </div>
     </div>
 
+    <!-- Link Insertion Modal -->
+    <div id="link-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden animate-fade-in">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md border border-warm-border relative">
+            <h3 class="text-lg font-bold text-primary mb-4 flex items-center gap-2">
+                <i data-lucide="link" class="w-5 h-5"></i> 插入超連結
+            </h3>
+
+            <label class="block text-sm font-medium text-warm-gray mb-1">連結網址 (URL)</label>
+            <div class="relative mb-4">
+                <input type="text" id="link-url-input"
+                    class="w-full p-2 border border-warm-border rounded-md text-warm-black focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                    placeholder="https://example.com/...">
+            </div>
+
+            <div class="mb-6">
+                <span class="text-xs text-warm-gray block mb-2 font-bold">點擊下方按鈕插入變數：</span>
+                <div id="link-modal-variables" class="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1">
+                    <!-- Variables will be injected here -->
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-warm-border">
+                <button onclick="closeLinkModal()"
+                    class="px-4 py-2 rounded text-sm text-warm-gray hover:bg-gray-100 transition-colors font-medium">取消</button>
+                <button onclick="confirmInsertLink()"
+                    class="px-4 py-2 rounded text-sm bg-primary text-white hover:bg-primary-hover transition-colors shadow-sm font-bold">確認插入</button>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript Logic -->
     <script>
         // --- 初始狀態與變數 ---
         const defaultData = `姓名,Email,學校,課程名稱,課程連結
 王大明,ming@example.com,臺北科技大學,人工智慧導論,https://ntut.edu.tw/ai
 李小華,"hua@example.com\nlee@gmail.com",成功大學,Python基礎,https://ncku.edu.tw/python
-張志明,chang@example.com,清華大學,資料結構,https://nthu.edu.tw/ds`;
+張志明,chang@example.com,清華大學,資料結構,
+陳小美,may@example.com,台灣大學,網頁設計,`;
 
-        const defaultBody = `<div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">您好 <b>{姓名:姓}</b> 老師：</span></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">感謝您在 {學校} 開設「<span style="color: blue;">{課程名稱}</span>」。</span></div><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">您的課程連結如下：</span></div><div><a href="{課程連結}" style="font-family: Calibri, sans-serif; font-size: 12pt;">{課程連結}</a></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">請確認內容是否無誤。</span></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">教務團隊 敬上</span></div>`;
+        const defaultBody = `<div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">您好 <b>{姓名:姓}</b> 老師：</span></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">感謝您在 {學校} 開設「<span style="color: blue;">{課程名稱}</span>」。</span></div><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">您的課程連結如下：</span></div><div><a href="{課程連結}" style="font-family: Calibri, sans-serif; font-size: 12pt;">{課程連結}</a></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">(若連結為空，則不顯示連結)</span></div><br><div><span style="font-family: Calibri, sans-serif; font-size: 12pt;">教務團隊 敬上</span></div>`;
 
         let state = {
             csvInput: defaultData,
@@ -435,7 +477,7 @@
             showBCC: false
         };
 
-        const STORAGE_KEY = 'email_generator_state_v7'; // Version bump for surname feature
+        const STORAGE_KEY = 'email_generator_state_v9'; // Version bump
         let savedRange = null;
 
         // DOM 元素引用
@@ -451,6 +493,11 @@
             groupSettings: document.getElementById('group-settings'),
             groupColumn: document.getElementById('group-column'),
             bccToggle: document.getElementById('bcc-toggle'),
+            // Modal Elements
+            linkModal: document.getElementById('link-modal'),
+            linkUrlInput: document.getElementById('link-url-input'),
+            linkModalVariables: document.getElementById('link-modal-variables'),
+
             btns: {
                 data: document.getElementById('btn-tab-data'),
                 template: document.getElementById('btn-tab-template'),
@@ -493,7 +540,7 @@
             });
 
             document.addEventListener('click', (e) => {
-                if (!e.target.closest('.relative.inline-block')) {
+                if (!e.target.closest('.relative.inline-block') && !e.target.closest('#link-modal')) {
                     closeAllMenus();
                 }
             });
@@ -800,16 +847,66 @@
             updateDataUI();
         }
 
+        // --- Toolbar & Modal Logic ---
         function handleToolbar(e, command) {
             e.preventDefault();
-            els.editor.focus();
             if (command === 'createLink') {
-                const url = prompt("請輸入網址 (可輸入 {變數} )：", "https://");
-                if (url) document.execCommand(command, false, url);
+                saveSelection(); // 先記住游標在編輯器的哪裡
+                openLinkModal();
             } else if (command === 'unlink') {
+                els.editor.focus();
                 document.execCommand('unlink', false, null);
             } else {
+                els.editor.focus();
                 document.execCommand(command, false, null);
+            }
+        }
+
+        function openLinkModal() {
+            // 1. Reset input
+            els.linkUrlInput.value = '';
+
+            // 2. Populate variable buttons
+            els.linkModalVariables.innerHTML = '';
+            state.headers.forEach(h => {
+                const btn = document.createElement('button');
+                btn.className = "px-2 py-1 bg-warm-bg hover:bg-white hover:text-primary border border-warm-border rounded text-xs text-warm-gray transition-colors";
+                btn.innerText = `{${h}}`;
+                // Click to append text to input
+                btn.onclick = () => addVariableToLinkInput(`{${h}}`);
+                els.linkModalVariables.appendChild(btn);
+            });
+
+            // 3. Show Modal
+            els.linkModal.classList.remove('hidden');
+            els.linkUrlInput.focus();
+        }
+
+        function closeLinkModal() {
+            els.linkModal.classList.add('hidden');
+        }
+
+        function addVariableToLinkInput(variableStr) {
+            const input = els.linkUrlInput;
+            const startPos = input.selectionStart;
+            const endPos = input.selectionEnd;
+            const text = input.value;
+
+            // Insert at cursor or replace selection
+            input.value = text.substring(0, startPos) + variableStr + text.substring(endPos);
+
+            // Move cursor after inserted text
+            const newPos = startPos + variableStr.length;
+            input.setSelectionRange(newPos, newPos);
+            input.focus();
+        }
+
+        function confirmInsertLink() {
+            const url = els.linkUrlInput.value.trim();
+            closeLinkModal();
+            restoreSelection(); // 回復編輯器的游標位置
+            if (url) {
+                document.execCommand('createLink', false, url);
             }
         }
 
@@ -851,6 +948,26 @@
             saveState();
         }
 
+        // --- NEW: Helper to clean invalid links ---
+        function cleanHtmlLinks(htmlString) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlString;
+            const links = tempDiv.querySelectorAll('a');
+
+            links.forEach(link => {
+                const href = link.getAttribute('href');
+                // 如果 href 不存在、是空字串，或者只是 'http://', 'https://' (沒內容)
+                if (!href || href.trim() === '' || href.trim() === 'http://' || href.trim() === 'https://') {
+                    // Unwrap the link: keep content (children), remove the A tag
+                    while (link.firstChild) {
+                        link.parentNode.insertBefore(link.firstChild, link);
+                    }
+                    link.parentNode.removeChild(link);
+                }
+            });
+            return tempDiv.innerHTML;
+        }
+
         function renderPreview() {
             const bodyTemplate = els.editor.innerHTML;
             if (state.displayData.length === 0) {
@@ -873,7 +990,11 @@
                     if (kLower.includes('bcc') || k.includes('密件')) dynamicBCC = row[k];
                 });
 
-                const finalBodyHtml = replaceVariables(bodyTemplate, row);
+                // 1. Replace variables
+                let finalBodyHtml = replaceVariables(bodyTemplate, row);
+                // 2. Clean invalid links (NEW STEP)
+                finalBodyHtml = cleanHtmlLinks(finalBodyHtml);
+
 
                 const card = document.createElement('div');
                 card.className = "bg-white border border-warm-border rounded-lg shadow-sm mb-6";
@@ -1074,6 +1195,12 @@
         window.insertVariable = insertVariable; // Ensure this is also exposed
         window.copyToClipboard = copyToClipboard;
         window.copySimpleText = copySimpleText;
+
+        // NEW Modal Functions
+        window.openLinkModal = openLinkModal;
+        window.closeLinkModal = closeLinkModal;
+        window.confirmInsertLink = confirmInsertLink;
+        window.addVariableToLinkInput = addVariableToLinkInput;
 
         init();
     </script>
