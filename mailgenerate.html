@@ -15,13 +15,13 @@
                     colors: {
                         primary: '#a87b00',       // 琥珀金
                         'primary-hover': '#8a6500', // 深琥珀色
-                        'warm-bg': '#faf9f6',     // 暖米白
-                        'card-bg': '#ffffff',     // 純白
+                        'warm-bg': '#faf9f6',      // 暖米白
+                        'card-bg': '#ffffff',      // 純白
                         'warm-black': '#2b261b',  // 暖黑
-                        'warm-gray': '#706b60',   // 暖灰
+                        'warm-gray': '#706b60',    // 暖灰
                         'warm-border': '#d6d3cd', // 邊框色
-                        'info-bg': '#fff8e1',     // 資訊框背景 (淡琥珀)
-                        'info-text': '#8a6500',   // 資訊框文字
+                        'info-bg': '#fff8e1',      // 資訊框背景 (淡琥珀)
+                        'info-text': '#8a6500',    // 資訊框文字
                         'info-border': '#ffe082', // 資訊框邊框
                         'success-bg': '#f0fdf4',  // 成功綠背景
                         'success-border': '#22c55e', // 成功綠邊框
@@ -298,6 +298,12 @@
                         <!-- Toolbar -->
                         <div
                             class="flex flex-wrap gap-1 p-2 bg-warm-bg border border-b-0 border-warm-border rounded-t-md select-none items-center relative">
+                            <button onmousedown="handleToolbar(event, 'removeFormat')"
+                                class="p-1.5 hover:bg-white hover:text-red-600 rounded text-warm-gray transition-colors"
+                                title="清除格式 (重設為預設字體)"><i data-lucide="eraser" class="w-4 h-4"></i></button>
+
+                            <div class="w-px h-6 bg-warm-border mx-1 self-center"></div>
+
                             <button onmousedown="handleToolbar(event, 'bold')"
                                 class="p-1.5 hover:bg-white hover:text-primary rounded text-warm-gray transition-colors"
                                 title="粗體"><i data-lucide="bold" class="w-4 h-4"></i></button>
@@ -435,6 +441,20 @@
                         請先輸入資料並確認模板
                     </div>
                 </div>
+
+                 <!-- 除錯資訊區塊 -->
+                <div class="mt-8 border-t-2 border-warm-gray pt-4">
+                    <h3 class="text-lg font-bold text-red-600 mb-2 flex items-center gap-2">
+                        <i data-lucide="bug" class="w-5 h-5"></i> 除錯資訊 (Debug Info)
+                    </h3>
+                    <p class="text-sm text-warm-gray mb-2">請複製下方黑色框框中的內容提供給開發者分析：</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-warm-gray mb-1">準備寫入剪貼簿的 HTML (請複製這段):</label>
+                            <textarea id="debug-clipboard-output" class="w-full h-32 p-2 bg-black text-green-400 font-mono text-xs rounded border border-gray-700" readonly></textarea>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -492,7 +512,7 @@
             showBCC: false
         };
 
-        const STORAGE_KEY = 'email_generator_state_v12'; // Version bump
+        const STORAGE_KEY = 'email_generator_state_v17_debug'; 
         let savedRange = null;
         let lastFocusedElement = null; // Track last focused input/editor
 
@@ -513,6 +533,8 @@
             linkModal: document.getElementById('link-modal'),
             linkUrlInput: document.getElementById('link-url-input'),
             linkModalVariables: document.getElementById('link-modal-variables'),
+            // Debug Elements
+            debugClipboard: document.getElementById('debug-clipboard-output'),
 
             btns: {
                 data: document.getElementById('btn-tab-data'),
@@ -864,6 +886,9 @@
             } else if (command === 'unlink') {
                 els.editor.focus();
                 document.execCommand('unlink', false, null);
+            } else if (command === 'removeFormat') {
+                els.editor.focus();
+                document.execCommand('removeFormat', false, null);
             } else {
                 els.editor.focus();
                 document.execCommand(command, false, null);
@@ -1122,17 +1147,7 @@
             });
             return result;
         }
-        function stripHtml(html) {
-            const temp = document.createElement('div');
-            temp.innerHTML = html;
-            return temp.innerText || temp.textContent || '';
-        }
-        function convertRgbToHexInHtml(html) {
-            return html.replace(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/gi, (match, r, g, b) => {
-                const toHex = (n) => { const hex = parseInt(n).toString(16); return hex.length === 1 ? '0' + hex : hex; };
-                return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-            });
-        }
+
         function copySimpleText(btn, text) {
             if (!text) return;
             const textarea = document.createElement('textarea');
@@ -1155,37 +1170,139 @@
                 }, 1500);
             } catch (err) { alert('複製失敗'); } finally { document.body.removeChild(textarea); }
         }
+
+        /**
+         * Helper function to convert any color string to Hex
+         * Supports: "rgb(r, g, b)", "rgba(r, g, b, 1)", and basic named colors if browser parses them.
+         */
+        function forceHexColor(colorStr) {
+            if (!colorStr) return null;
+            // Check for RGB/RGBA
+            const rgbMatch = colorStr.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*1)?\)$/i);
+            if (rgbMatch) {
+                const r = parseInt(rgbMatch[1]);
+                const g = parseInt(rgbMatch[2]);
+                const b = parseInt(rgbMatch[3]);
+                const toHex = (n) => { const hex = n.toString(16); return hex.length === 1 ? '0' + hex : hex; };
+                return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+            }
+            // If it's already hex, return it
+            if (colorStr.startsWith('#')) return colorStr;
+            // If it's a named color (rarely returned by style object in modern browsers unless explicitly set), 
+            // we leave it as is, Outlook usually handles standard names (red, blue) ok, but Hex is best.
+            // But usually browsers convert named to RGB in computed style.
+            return colorStr;
+        }
+
         function copyToClipboard(btn, index) {
             const rawHtml = decodeURIComponent(btn.getAttribute('data-content'));
             const processor = document.createElement('div');
             processor.innerHTML = rawHtml;
             const fontFamily = "'Calibri', sans-serif";
             const fontSize = "12pt";
-            const color = "#000000";
+            const defaultColor = "#000000";
 
             const allElements = processor.querySelectorAll('*');
+            
+            // --- CLEANING PASS: WHITELIST REBUILD ---
+            // Iterate all elements and aggressively rebuild their style attributes
+            // to strip all --tw-* variables and other noise.
             allElements.forEach(el => {
-                el.removeAttribute('class');
-                if (!el.style.fontFamily) el.style.fontFamily = fontFamily;
-                if (!el.style.fontSize) el.style.fontSize = fontSize;
+                const computedStyle = el.style; // Access the inline style object directly
+                const newStyles = [];
+                let hasBg = false;
+                
+                // 1. Extract Core Properties
+                // We manually check the inline style properties we care about
+                const targetProps = [
+                    'color', 
+                    'background-color', 
+                    'font-weight', 
+                    'font-style', 
+                    'text-decoration', 
+                    'text-align', 
+                    'vertical-align'
+                ];
 
-                if (['B', 'STRONG'].includes(el.tagName)) {
-                    el.style.fontWeight = 'bold';
+                targetProps.forEach(prop => {
+                    let val = computedStyle.getPropertyValue(prop);
+                    if (val && val !== 'initial' && val !== 'inherit' && val !== 'transparent' && val !== 'rgba(0, 0, 0, 0)') {
+                        
+                        // Fix Colors to Hex
+                        if (prop.includes('color')) {
+                            const hex = forceHexColor(val);
+                            if (hex) val = hex;
+                        }
+                        
+                        // Special Handling for Background
+                        if (prop === 'background-color') {
+                            hasBg = true;
+                            // Add background shorthand for Outlook safety
+                            newStyles.push(`background: ${val}`);
+                        }
+
+                        newStyles.push(`${prop}: ${val}`);
+                    }
+                });
+
+                // 2. Add MSO Highlight (The Nuclear Fix)
+                // If we detected a background color, we force an mso-highlight property.
+                if (hasBg) {
+                    // Try to match standard colors, otherwise default to yellow or just let shading handle it
+                    const bgVal = forceHexColor(computedStyle.backgroundColor)?.toUpperCase();
+                    let msoName = 'yellow'; // Default fallback
+                    
+                    if (bgVal === '#FFFF00') msoName = 'yellow';
+                    else if (bgVal === '#00FF00' || bgVal === '#008000') msoName = 'lime';
+                    else if (bgVal === '#00FFFF') msoName = 'cyan';
+                    else if (bgVal === '#FF00FF') msoName = 'magenta';
+                    else if (bgVal === '#0000FF') msoName = 'blue';
+                    else if (bgVal === '#FF0000') msoName = 'red';
+                    else if (bgVal === '#000000') msoName = 'black';
+                    else if (bgVal === '#D1D5DB' || bgVal === '#C0C0C0') msoName = 'gray-25';
+                    
+                    // Inject mso-highlight. This tells Word/Outlook "This is a highlighter pen"
+                    newStyles.push(`mso-highlight: ${msoName}`);
                 }
 
-                if (['I', 'EM'].includes(el.tagName)) el.style.fontStyle = 'italic';
+                // 3. FORCE Font Uniformity (Override everything else)
+                newStyles.push(`font-family: ${fontFamily}`);
+                newStyles.push(`font-size: ${fontSize}`);
 
-                if (['U'].includes(el.tagName)) el.style.textDecoration = 'underline';
+                // 4. Handle Tag-Specific Styles (Re-apply semantic styles)
+                if (['B', 'STRONG'].includes(el.tagName)) newStyles.push('font-weight: bold');
+                if (['I', 'EM'].includes(el.tagName)) newStyles.push('font-style: italic');
+                if (['U'].includes(el.tagName)) newStyles.push('text-decoration: underline');
+                if (el.tagName === 'A') {
+                    newStyles.push('color: blue');
+                    newStyles.push('text-decoration: underline');
+                }
+                if (['UL', 'OL'].includes(el.tagName)) {
+                    newStyles.push('margin-left: 24px');
+                    newStyles.push('padding-left: 0');
+                }
+                if (el.tagName === 'LI') {
+                    newStyles.push('margin-bottom: 4px');
+                }
 
-                if (['UL', 'OL'].includes(el.tagName)) { el.style.marginLeft = '24px'; el.style.paddingLeft = '0'; }
-                if (el.tagName === 'LI') { el.style.fontFamily = fontFamily; el.style.fontSize = fontSize; el.style.marginBottom = '4px'; }
-                if (el.tagName === 'A') { el.style.color = 'blue'; el.style.textDecoration = 'underline'; }
+                // 5. REPLACE the entire style attribute
+                // This strips out all the --tw-* garbage and keeps only what we just built
+                if (newStyles.length > 0) {
+                    el.setAttribute('style', newStyles.join('; '));
+                } else {
+                    el.removeAttribute('style');
+                }
             });
 
-            let processedHtml = processor.innerHTML;
-            processedHtml = convertRgbToHexInHtml(processedHtml);
-            const finalHtml = `<div style="font-family: ${fontFamily}; font-size: ${fontSize}; color: ${color};">${processedHtml}</div>`;
+            // Wrap in a div that enforces global font/color for the paste operation
+            const finalHtml = `<div style="font-family: ${fontFamily}; font-size: ${fontSize}; color: ${defaultColor};">${processor.innerHTML}</div>`;
             const plainText = processor.innerText || processor.textContent;
+
+            // --- DEBUG OUTPUT ---
+            // Write the final HTML to the debug textarea
+            if (els.debugClipboard) {
+                els.debugClipboard.value = finalHtml;
+            }
 
             const listener = (e) => {
                 e.preventDefault();
